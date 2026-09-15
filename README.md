@@ -1,86 +1,141 @@
 
-# Rural Healthcare Platform
-  
+# Anvaya Vistara - Rural Healthcare Platform
+
 ## 1. Project Overview
 
-Anvaya Vistara is an integrated multi-tiered healthcare management platform designed for rural health networks, Primary Health Centres (PHCs), Community Health Centres (CHCs), Sub-Centres, and District Hospitals. It streamlines patient registration, triage queue management, inter-hospital referral tracking, inventory control, electronic health records (EHR), and two-step authentication recovery.
+Anvaya Vistara is an integrated multi-tiered healthcare management platform designed for rural health networks - Primary Health Centres (PHCs), Sub-Centres, and District Hospitals. It streamlines patient registration, OPD queue management, inter-hospital referral tracking, inventory control, electronic health records (EHR), teleconsultation, and secure authentication flows.
+
+-   **General Login:**  `https://app.anvaya.site/login`
+-   **Patient Signup:**  `https://app.anvaya.site/signup`
+-   **Logout:**  `https://app.anvaya.site/logout`
+-   **Forgot Password:**  `https://app.anvaya.site/forgot-password`
+-   **Admin Portals:**  `https://app.anvaya.site/admin/`
+-   **PHC Portals:**  `https://app.anvaya.site/phc/` 
+-   **Patient Portal:**  `https://app.anvaya.site/patient/`  
 
 ### Key Features
--  **OPD Queue & Token Management**: Triage priority token generation (OPD-001, EMG-001, REF-001), queue status progression (scheduled -> checked_in -> in_progress -> completed / no_show), live public display board polling, and patient estimated wait time calculations.
--  **Inter-Hospital Referral Tracking**: Visual 5-stage referral transfer stepper and 1-click priority destination queue auto-enqueue between PHCs, CHCs, and District Hospitals.
--  **2-Step Password Reset & Privacy**: Masked email privacy protection (e.g. va*************a@g***l.com) and mandatory 2-step OTP verification before new password creation.
--  **Teleconsultation Feature Roadmap**: Modern glassmorphic Coming Soon feature pages for PHC clinical staff and patient portals.
--  **Time Sync & Validation**: Server-side world clock verification endpoint (/api/time) and past slot booking prevention.
--  **Database Recreation Script**: Standalone SQL database creation and seeding script (full_setup.sql) with RBAC permissions and default health facilities.
+
+- **OPD Queue & Token Management** - Triage-priority token generation (`OPD-001`, `EMG-001`, `REF-001`), queue status progression (`scheduled -> checked_in -> in_progress -> completed / no_show`), live public display board polling, and estimated wait time.
+- **Inter-Hospital Referral Tracking** - Visual 5-stage referral stepper and 1-click priority destination queue auto-enqueue between PHCs, CHCs, and District Hospitals.
+- **Teleconsultation** - Real-time text-based chat rooms between clinicians and patients with session management, message polling, diagnosis, and prescription on completion.
+- **2-Step Password Reset & Privacy** - Masked email privacy protection (e.g. `va*****a@g***l.com`) and mandatory 2-step OTP verification before password creation.
+- **Role-Based Access Control (RBAC)** - Configurable permission matrix across 11 roles and 15 action scopes, editable from the admin UI.
+- **Audit Logging** - Every sensitive action is recorded with user ID, IP address, and timestamp for compliance.
+- **Structured Logging** - Colored, formatted log output with per-module loggers and log-level control.
+- **Rate Limiting & IP Security** - Per-endpoint rate limits via Flask-Limiter, IP lockout on repeated login failures, and optional VPN blocking.
+- **Internationalization (i18n)** - Hindi (`hi`) and English (`en`) language support via JSON translation files.
+- **Time Sync & Validation** - Server-side world clock endpoint (`/api/time`) for client synchronization and past-slot booking prevention.
+
+---
 
 ## 2. Available Routes & Specifications
 
 ### I) Authentication & Account Recovery (`/` prefix)
 
--  `/login` - Role-aware sign-in for staff, doctors, and patients.
--  `/forgot-password` - Account recovery request with email privacy masking.
--  `/reset-password` - Step 1 OTP code verification & Step 2 password update.
--  `/logout` - Secure session clearance and audit log record.
- 
-### II) Primary Health Centre - PHC (`/phc` prefix) 
+| Route | Description |
+|---|---|
+| `/login` | Role-aware sign-in (username + password or email + OTP) |
+| `/signup` | Patient self-registration with email OTP verification |
+| `/verify-otp` | 6-digit OTP verification for signup and email login |
+| `/accept-invite/<token>` | Staff invitation acceptance and password setup |
+| `/forgot-password` | Account recovery with masked email privacy |
+| `/reset-password/<token>` | OTP verification and new password creation |
+| `/logout` | Secure session clearance with audit log |
+| `/app` | Smart role-based redirect after login |
 
-Management and operations for Primary Health Centres.
+### II) Primary Health Centre - PHC (`/phc` prefix)
 
--  `/phc/dashboard` - Main overview for PHC Medical Officers and staff.
--  `/phc/queue` - Live triage priority queue & token management.
--  `/phc/queue/display` - Public OPD queue display board.
--  `/phc/consultation` - Clinical consultation, vitals & EHR prescription notes.
--  `/phc/teleconsult` - Virtual teleconsultation coming soon roadmap.
--  `/phc/prescriptions` - Pharmacy prescription dispatch.
--  `/phc/inventory` - PHC medical inventory and vaccine stock control.
--  `/phc/referrals` - Incoming and outgoing inter-hospital referrals.
+| Route | Description |
+|---|---|
+| `/phc/dashboard` | PHC operational overview for Medical Officers and staff |
+| `/phc/queue` | Live triage priority queue and token management |
+| `/phc/queue/display` | Public OPD queue display board (no auth required) |
+| `/phc/consultation` | Clinical consultation - vitals, EHR, prescriptions |
+| `/phc/teleconsult` | Teleconsultation session list and management |
+| `/phc/teleconsult/room/<id>` | Real-time teleconsult chat room |
+| `/phc/prescriptions` | Pharmacy prescription dispatch interface |
+| `/phc/inventory` | Centre-level medical supply and vaccine stock control |
+| `/phc/referrals` | Incoming and outgoing inter-hospital referrals |
 
 ### III) Regional & District Hospital (`/region` prefix)
 
-Higher-level care management for Regional and District Hospitals.
-  
--  `/region/dashboard` - District hospital operational overview.
--  `/region/referrals` - Manage incoming referrals from PHCs and 1-click queue enqueue.
--  `/region/counter_referrals` - Specialist counter-referral guidance.
--  `/region/admissions` - Patient ward admissions tracking.
--  `/region/discharges` - Patient discharge summaries.
+| Route | Description |
+|---|---|
+| `/region/dashboard` | District hospital operational overview |
+| `/region/referrals` | Incoming PHC transfer management |
+| `/region/counter-referrals` | Specialist counter-referral guidance |
+| `/region/admissions` | Patient ward admissions tracking |
+| `/region/discharges` | Patient discharge summaries |
 
 ### IV) Administration (`/admin` prefix)
 
-System administration and oversight.
+| Route | Description |
+|---|---|
+| `/admin/dashboard` | System administrator dashboard with live audit feed |
+| `/admin/analytics` | Epidemiological analytics and disease tracking |
+| `/admin/surveillance` | Health outbreak surveillance data |
+| `/admin/facilities` | Healthcare facility directory and resource management |
+| `/admin/inventory` | Global medical supply inventory with CSV import/export |
+| `/admin/reports` | Aggregated health network report generation |
+| `/admin/users` | Staff and patient account management |
+| `/admin/staff` | Staff registration, invitations, and role management |
+| `/admin/permissions` | RBAC role-action permission matrix configuration |
+| `/admin/audit-logs` | System audit logs with CSV export |
 
--  `/admin/dashboard` - Administrator system dashboard.
--  `/admin/analytics` - System analytics and epidemiological metrics.
--  `/admin/surveillance` - Health outbreak surveillance data.
--  `/admin/facilities` - Manage healthcare facility directory and resources.
--  `/admin/inventory` - Global medical supply inventory overview.
--  `/admin/reports` - Generate health network reports.
--  `/admin/users` - Staff and patient account management.
--  `/admin/permissions` - Role-based access control (RBAC) configuration.
--  `/admin/audit-logs` - System audit logs for security and compliance.
+### V) Patients (`/patient` prefix)
 
-### V) Patients (`/patient` prefix)  
+| Route | Description |
+|---|---|
+| `/patient/appointments` | Online OPD booking and live queue position tracker |
+| `/patient/my_records` | Personal medical history, prescriptions, and labs |
+| `/patient/teleconsult` | Patient teleconsultation portal |
+| `/patient/map` | Interactive healthcare facility map |
+| `/patient/facilities` | Facility directory for patients |
+| `/patient/emergency` | Emergency contacts and ambulance request |
+| `/patient/notifications` | Patient notification centre |
 
--  `/patient/appointments` - Online OPD booking and live queue position tracker.
--  `/patient/my_records` - Personal medical history, prescriptions, and lab reports.
--  `/patient/teleconsult` - Virtual care coming soon preview.
+### VI) Facilities & Shared Pages
 
-### VI) Facilities (`/facilities` prefix)
+| Route | Description |
+|---|---|
+| `/facilities/` | Directory of all regional facilities |
+| `/facilities/<facility_id>` | Specific facility details and capacity |
+| `/map` | Regional interactive healthcare facility map |
+| `/settings` | User profile settings, password change, email update |
+| `/notifications` | Notification centre (role-aware redirect) |
 
--  `/facilities/` - Directory of all regional facilities.
--  `/facilities/<facility_id>` - Specific facility details and capacity.
--  `/map` - Regional interactive healthcare facility map.
+### VII) JSON API (`/api` prefix)
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/health` | GET | Health check endpoint |
+| `/api/time` | GET | Server time synchronization |
+| `/api/notifications` | GET | Fetch user notifications (JSON) |
+| `/api/notifications/read` | POST | Mark notifications as read |
+| `/api/set-lang` | POST | Set language preference |
+
+---
 
 ## 3. Configuration & Environment
 
-Environment variables are loaded via `python-dotenv`. Active configuration is expected in `.env`.
+Environment variables are loaded via `python-dotenv` from `.env`. See [`.env.example`](.env.example) for the full template.
 
-Key Configurations:
--  **Database (MySQL):**  `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB`
--  **Security:**  `SECRET_KEY`, `SESSION_TYPE`
--  **Email**: `ZOHO_EMAIL`, `ZOHO_PASSWORD`
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Flask session encryption key (**required**, app refuses to start without it) |
+| `DB_TYPE` | Database backend (`postgres`) |
+| `PG_HOST`, `PG_PORT`, `PG_USER`, `PG_PASSWORD`, `PG_DB` | PostgreSQL / Supabase connection |
+| `SESSION_TYPE` | Session backend (`filesystem`) |
+| `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_DEFAULT_SENDER` | Mailjet API credentials and sender address |
+| `RATELIMIT_ENABLED`, `RATELIMIT_DEFAULT` | Rate limiting toggle and default limits |
+| `BLOCK_VPN` | Toggle VPN/proxy blocking on auth routes |
+| `OTP_VALIDITY_SECONDS` | OTP expiry duration (default: 600s) |
+| `FLASK_ENV` | `development` or `production` (controls debug mode, rate limits) |
+
+---
 
 ## 4. Project Structure
+
 ```
 Anvaya-Vistara/
 │
@@ -88,83 +143,94 @@ Anvaya-Vistara/
 ├── .env.example
 ├── app.py
 ├── config.py
-├── create_admin.py
 ├── requirements.txt
-├── README.md
-├── sample.sql
+├── postgres_sample.sql
 │
 ├── blueprints/
-│ ├── admin/
-│ ├── api/
-│ ├── auth/
-│ ├── center/
-│ ├── dashboard/
-│ ├── patient/
-│ ├── phc/
-│ └── region/
+│   ├── admin/
+│   ├── api/
+│   ├── auth/
+│   ├── center/
+│   ├── dashboard/
+│   ├── patient/
+│   ├── phc/
+│   └── region/
 │
 ├── static/
-│ ├── js/
-│ │ └── main.js
-│ └── styles.css
+│   ├── js/
+│   │   └── main.js
+│   └── styles.css
 │
 ├── templates/
-│ ├── admin/
-│ ├── auth/
-│ ├── center/
-│ ├── dashboard/
-│ ├── errors/
-│ ├── facilities/
-│ ├── patient/
-│ ├── phc/
-│ └── region/
+│   ├── admin/
+│   ├── auth/
+│   ├── center/
+│   ├── dashboard/
+│   ├── errors/
+│   ├── facilities/
+│   ├── patient/
+│   ├── phc/
+│   ├── region/
+│   ├── base.html
+│   └── shell.html
 │
 ├── translations/
-│ ├── en.json
-│ └── hi.json
+│   ├── en.json
+│   └── hi.json
 │
 └── utils/
-├── __init__.py
-├── audit.py
-├── auth_helpers.py
-├── constants.py
-├── db.py
-├── defaults.py
-├── email_helper.py
-├── i18n.py
-├── id_gen.py
-├── id_generator.py
-├── notifications.py
-├── permissions.py
-├── sanitize.py
-└── permissions.py
+    ├── __init__.py
+    ├── audit.py
+    ├── auth_helpers.py
+    ├── constants.py
+    ├── db.py
+    ├── defaults.py
+    ├── email_helper.py
+    ├── i18n.py
+    ├── id_generator.py
+    ├── logger.py
+    ├── notifications.py
+    ├── permissions.py
+    ├── sanitize.py
+    └── security.py
 ```
+
+---
 
 ## 5. Technology Stack
 
--  **Backend**: Python 3.x, Flask
--  **Database**: MySQL (DictCursor)
--  **Frontend**: HTML5, Vanilla CSS3, JavaScript
--  **Authentication & Security**: Flask-Session, bcrypt, pyotp
+| Layer | Technology |
+|---|---|
+| **Backend** | Python 3.x, Flask 3.1 |
+| **Database** | PostgreSQL (Supabase-hosted), psycopg2 |
+| **Frontend** | HTML5, Vanilla CSS3, JavaScript |
+| **Email** | Mailjet REST API |
+| **Auth & Security** | bcrypt, Flask-Session, Flask-Limiter, Flask-WTF (CSRF), IP lockout |
+| **Rate Limiting** | Flask-Limiter (in-memory or Redis-backed) |
 
-## 6. Database Recreation & Testing
+---
 
--  **Recreate Complete Database:**
+## 6. Getting Started
 
-```bash
-mysql -u root -p rural_health_db < sample.sql
-```
-
--  **Run Automated Test Suite:**
+### Prerequisites
+- Python 3.10+
+- PostgreSQL database (Supabase project)
+- Mailjet account (for transactional email)
 
 ## 7. Dependencies
 
-The project relies on the following Python packages (defined in `requirements.txt`):
+All packages are pinned in [`requirements.txt`](requirements.txt):
 
--  `Flask==3.1.1`: Core web framework.
--  `flask-mysqldb==2.0.0`: MySQL database integration.
--  `Flask-Session==0.8.0`: Server-side session management (filesystem-based).
--  `pyotp==2.9.0`: One-Time Password generation for 2FA.
--  `bcrypt==4.3.0`: Secure password hashing.
--  `python-dotenv==1.1.0`: Loading environment variables from `.env` files.
--  `qrcode==8.0` & `Pillow==11.2.1`: QR code generation and image processing.
+| Package | Purpose |
+|---|---|
+| `Flask` | Core web framework |
+| `psycopg2-binary` | PostgreSQL database adapter |
+| `Flask-Session` | Server-side filesystem session management |
+| `Flask-Limiter` | IP and endpoint rate limiting |
+| `Flask-WTF` + `WTForms` | Form validation and CSRF protection |
+| `Flask-Cors` | Cross-Origin Resource Sharing |
+| `bcrypt` | Secure password hashing |
+| `mailjet-rest` | Transactional email delivery API |
+| `python-dotenv` | `.env` file loading |
+| `requests` | Outbound HTTP calls |
+| `msgspec` | Fast serialization |

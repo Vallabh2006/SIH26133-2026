@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from utils.notifications import create_notification, notify_patient
 import json
 import random
@@ -16,21 +18,44 @@ from utils.id_generator import generate_patient_id
 from utils.defaults import get_user_center_id
 from utils.constants import DEFAULT_ALLERGIES
 from utils.sanitize import validate_username, validate_email, validate_phone
+from utils.security import check_ip_lockout, record_failed_ip_login, clear_ip_login_attempts, block_if_vpn, get_client_ip
 from app import limiter
 
 auth_bp = Blueprint('auth', __name__, template_folder='../../templates/auth')
+
+
+def hash_otp(code):
+    return hashlib.sha256(str(code).encode('utf-8')).hexdigest()
+
+
+def check_otp(entered_code, stored_val):
+    if not entered_code or not stored_val:
+        return False
+    entered_hash = hashlib.sha256(str(entered_code).encode('utf-8')).hexdigest()
+    if hmac.compare_digest(entered_hash, str(stored_val)):
+        return True
+    return hmac.compare_digest(str(entered_code), str(stored_val))
+
 
 
 def parse_flexible_dob(dob_str):
     dob_str = (dob_str or '').strip()
     if not dob_str:
         return None
+    from datetime import date
+    parsed_date = None
     for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d', '%d.%m.%Y', '%m/%d/%Y'):
         try:
-            return datetime.strptime(dob_str, fmt).strftime('%Y-%m-%d')
+            parsed_date = datetime.strptime(dob_str, fmt).date()
+            break
         except ValueError:
             pass
-    return dob_str
+    if not parsed_date:
+        return None
+    today = date.today()
+    if parsed_date > today or parsed_date < date(1900, 1, 1):
+        return None
+    return parsed_date.strftime('%Y-%m-%d')
 
 
 def validate_password_complexity(password):
@@ -48,15 +73,27 @@ def validate_password_complexity(password):
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute; 20 per hour", methods=["POST"])
+@limiter.limit("20 per minute; 60 per hour", methods=["POST"])
 def login():
     if 'user_id' in session:
         return redirect(url_for('auth.app_redirect'))
+
+    vpn_blocked = block_if_vpn()
+    if vpn_blocked:
+        return vpn_blocked
 
     active_tab = request.args.get('tab', 'username')
     form_data = {}
 
     if request.method == 'POST':
+        client_ip = get_client_ip()
+        is_ip_locked, remaining_secs, remaining_attempts = check_ip_lockout(client_ip)
+        if is_ip_locked:
+            remaining_mins = int(remaining_secs / 60) + 1
+            log_audit('ip_lockout_blocked_attempt', 'ip', None, {'ip': client_ip, 'remaining_minutes': remaining_mins})
+            flash(f'Too many failed login attempts from your IP address ({client_ip}). Access is temporarily suspended. Please try again in {remaining_mins} minute(s).', 'error')
+            return render_template('login.html', active_tab=active_tab, form_data=form_data)
+
         login_type = request.form.get('login_type', 'username')
         form_data = request.form
         
@@ -69,25 +106,17 @@ def login():
                 
             user = query_db('SELECT * FROM users WHERE LOWER(email) = %s AND is_active = 1', (email,), one=True)
             if not user:
-                log_audit('login_failed_email_not_found', 'auth', None, {'email': email})
-                flash('No active account found with this email address.', 'error')
+                is_locked_now, rem_secs, rem_attempts = record_failed_ip_login(client_ip)
+                log_audit('login_failed_email_not_found', 'auth', None, {'email': email, 'ip': client_ip})
+                if is_locked_now:
+                    rem_mins = int(rem_secs / 60) + 1
+                    flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
+                else:
+                    flash(f'No active account found with this email address. {rem_attempts} attempt(s) remaining for your IP.', 'error')
                 return render_template('login.html', active_tab='email', form_data=form_data)
 
-            if user.get('locked_until'):
-                locked_time = user['locked_until']
-                if isinstance(locked_time, str):
-                    try:
-                        locked_time = datetime.strptime(locked_time, '%Y-%m-%d %H:%M:%S')
-                    except Exception:
-                        locked_time = None
-                if locked_time and datetime.now() < locked_time:
-                    remaining_mins = int((locked_time - datetime.now()).total_seconds() / 60) + 1
-                    create_notification(user['id'], 'Security Alert: Locked Login Attempt', f'A sign-in attempt was blocked on {datetime.now().strftime("%b %d, %Y at %I:%M %p")} because your account is temporarily locked.', '/auth/forgot-password')
-                    flash(f'Account is temporarily locked due to excessive failed attempts. Please try again in {remaining_mins} minutes.', 'error')
-                    return render_template('login.html', active_tab='email', form_data=form_data)
-                
             otp_code = str(secrets.randbelow(900000) + 100000)
-            session['pending_otp'] = otp_code
+            session['pending_otp'] = hash_otp(otp_code)
             session['pending_otp_expires'] = time.time() + 600
             session['pending_user_id'] = user['id']
             session['pending_email'] = user['email']
@@ -96,7 +125,7 @@ def login():
             session['otp_flow'] = 'login'
             
             send_otp_email(user['email'], user['full_name'] or user['username'], otp_code)
-            log_audit('login_otp_initiated', 'user', user['id'])
+            log_audit('login_otp_initiated', 'user', user['id'], {'ip': client_ip})
             flash(f'Verification code sent to {mask_email(user["email"])}. Please enter the 6-digit OTP to complete login.', 'info')
             return redirect(url_for('auth.verify_otp'))
 
@@ -111,24 +140,17 @@ def login():
             if '@' in identifier:
                 user = query_db('SELECT * FROM users WHERE LOWER(email) = %s AND is_active = 1', (identifier.lower(),), one=True)
                 if not user:
-                    log_audit('login_failed', 'auth', None, {'identifier': identifier})
-                    flash('No active account found with this email address.', 'error')
+                    is_locked_now, rem_secs, rem_attempts = record_failed_ip_login(client_ip)
+                    log_audit('login_failed', 'auth', None, {'identifier': identifier, 'ip': client_ip})
+                    if is_locked_now:
+                        rem_mins = int(rem_secs / 60) + 1
+                        flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
+                    else:
+                        flash(f'No active account found with this email address. {rem_attempts} attempt(s) remaining for your IP.', 'error')
                     return render_template('login.html', active_tab='email', form_data=form_data)
-                
-                if user.get('locked_until'):
-                    locked_time = user['locked_until']
-                    if isinstance(locked_time, str):
-                        try:
-                            locked_time = datetime.strptime(locked_time, '%Y-%m-%d %H:%M:%S')
-                        except Exception:
-                            locked_time = None
-                    if locked_time and datetime.now() < locked_time:
-                        remaining_mins = int((locked_time - datetime.now()).total_seconds() / 60) + 1
-                        flash(f'Account is temporarily locked due to excessive failed attempts. Please try again in {remaining_mins} minutes.', 'error')
-                        return render_template('login.html', active_tab='email', form_data=form_data)
 
                 otp_code = str(secrets.randbelow(900000) + 100000)
-                session['pending_otp'] = otp_code
+                session['pending_otp'] = hash_otp(otp_code)
                 session['pending_otp_expires'] = time.time() + 600
                 session['pending_user_id'] = user['id']
                 session['pending_email'] = user['email']
@@ -137,7 +159,7 @@ def login():
                 session['otp_flow'] = 'login'
 
                 send_otp_email(user['email'], user['full_name'] or user['username'], otp_code)
-                log_audit('login_otp_initiated', 'user', user['id'])
+                log_audit('login_otp_initiated', 'user', user['id'], {'ip': client_ip})
                 flash(f'Logging in with email requires OTP verification. A 6-digit code was sent to {mask_email(user["email"])}.', 'info')
                 return redirect(url_for('auth.verify_otp'))
 
@@ -148,31 +170,20 @@ def login():
             user = query_db('SELECT * FROM users WHERE LOWER(username) = %s AND is_active = 1', (identifier,), one=True)
             
             if user:
-                if user.get('locked_until'):
-                    locked_time = user['locked_until']
-                    if isinstance(locked_time, str):
-                        try:
-                            locked_time = datetime.strptime(locked_time, '%Y-%m-%d %H:%M:%S')
-                        except Exception:
-                            locked_time = None
-                    if locked_time and datetime.now() < locked_time:
-                        remaining_mins = int((locked_time - datetime.now()).total_seconds() / 60) + 1
-                        create_notification(user['id'], 'Security Alert: Locked Login Attempt', f'A sign-in attempt was blocked on {datetime.now().strftime("%b %d, %Y at %I:%M %p")} because your account is temporarily locked.', '/auth/forgot-password')
-                        flash(f'Account is temporarily locked. Please try again in {remaining_mins} minutes or reset your password.', 'error')
-                        return render_template('login.html', active_tab='username', form_data=form_data)
-
                 if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                    clear_ip_login_attempts(client_ip)
                     execute_db('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = %s', (user['id'],))
                     session.clear()
                     session['user_id'] = user['id']
                     session['username'] = user['username']
                     session['role'] = user['role']
                     session['session_version'] = user.get('session_version', 1)
-                    log_audit('login_success', 'user', user['id'])
+                    session['lang'] = user.get('lang_pref') or session.get('lang', 'en')
+                    log_audit('login_success', 'user', user['id'], {'ip': client_ip})
                     create_notification(
                         user['id'],
                         'Security Alert: Successful Login',
-                        f'You successfully signed into your account on {datetime.now().strftime("%b %d, %Y at %I:%M %p")}.',
+                        f'You successfully signed into your account on {datetime.now().strftime("%b %d, %Y at %I:%M %p")} from IP {client_ip}.',
                         f'/patient/@{user.get("username")}' if user.get('role') == 'patient' else '/notifications'
                     )
                     
@@ -183,44 +194,42 @@ def login():
                     flash(f'Welcome back, {user.get("full_name") or user.get("username")}!', 'success')
                     return redirect(url_for('auth.app_redirect'))
                 else:
-                    new_failed = (user.get('failed_login_count') or 0) + 1
-                    if new_failed >= 5:
-                        lock_until = datetime.now() + timedelta(minutes=15)
-                        execute_db('UPDATE users SET failed_login_count = %s, locked_until = %s WHERE id = %s',
-                                   (new_failed, lock_until.strftime('%Y-%m-%d %H:%M:%S'), user['id']))
-                        log_audit('account_locked_failed_logins', 'user', user['id'], {'attempts': new_failed})
-                        create_notification(
-                            user['id'],
-                            'Security Alert: Account Temporarily Locked',
-                            f'Your account has been temporarily locked for 15 minutes due to {new_failed} consecutive failed login attempts on {datetime.now().strftime("%b %d, %Y at %I:%M %p")}.',
-                            '/auth/forgot-password'
-                        )
-                        flash('Too many failed attempts. Your account has been temporarily locked for 15 minutes.', 'error')
+                    is_locked_now, rem_secs, rem_attempts = record_failed_ip_login(client_ip)
+                    log_audit('login_failed_bad_password', 'user', user['id'], {'ip': client_ip})
+                    create_notification(
+                        user['id'],
+                        'Security Alert: Failed Login Attempt',
+                        f'An unsuccessful login attempt with an incorrect password was recorded on {datetime.now().strftime("%b %d, %Y at %I:%M %p")} from IP {client_ip}.',
+                        '/auth/forgot-password'
+                    )
+                    if is_locked_now:
+                        rem_mins = int(rem_secs / 60) + 1
+                        flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
                     else:
-                        execute_db('UPDATE users SET failed_login_count = %s WHERE id = %s', (new_failed, user['id']))
-                        log_audit('login_failed', 'user', user['id'], {'attempt': new_failed})
-                        remaining = 5 - new_failed
-                        create_notification(
-                            user['id'],
-                            'Security Alert: Failed Login Attempt',
-                            f'An unsuccessful login attempt with an incorrect password was recorded on {datetime.now().strftime("%b %d, %Y at %I:%M %p")} (Attempt {new_failed}/5).',
-                            '/auth/forgot-password'
-                        )
-                        flash(f'Invalid username or password. {remaining} attempt(s) remaining before temporary lockout.', 'error')
+                        flash(f'Invalid username or password. {rem_attempts} attempt(s) remaining for your IP address before temporary suspension.', 'error')
                     return render_template('login.html', active_tab='username', form_data=form_data)
             else:
-                log_audit('login_failed_user_not_found', 'auth', None, {'identifier': identifier})
-                flash('Invalid username or password.', 'error')
+                is_locked_now, rem_secs, rem_attempts = record_failed_ip_login(client_ip)
+                log_audit('login_failed_user_not_found', 'auth', None, {'identifier': identifier, 'ip': client_ip})
+                if is_locked_now:
+                    rem_mins = int(rem_secs / 60) + 1
+                    flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
+                else:
+                    flash(f'Invalid username or password. {rem_attempts} attempt(s) remaining for your IP address before temporary suspension.', 'error')
                 return render_template('login.html', active_tab='username', form_data=form_data)
 
     return render_template('login.html', active_tab=active_tab, form_data=form_data)
 
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("3 per minute; 10 per hour", methods=["POST"])
+@limiter.limit("10 per minute; 30 per hour", methods=["POST"])
 def signup():
     if 'user_id' in session:
         return redirect(url_for('auth.app_redirect'))
+
+    vpn_blocked = block_if_vpn()
+    if vpn_blocked:
+        return vpn_blocked
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
@@ -245,7 +254,7 @@ def signup():
         if not email or not validate_email(email):
             errors.append('A valid email address is required.')
         if not dob:
-            errors.append('Date of birth is required.')
+            errors.append('Please provide a valid date of birth between 1900 and today.')
         if not blood_group:
             errors.append('Blood group is required.')
         if password != confirm:
@@ -286,7 +295,7 @@ def signup():
         )
 
         otp_code = str(secrets.randbelow(900000) + 100000)
-        session['pending_otp'] = otp_code
+        session['pending_otp'] = hash_otp(otp_code)
         session['pending_otp_expires'] = time.time() + 600
         session['pending_user_id'] = user['id']
         session['pending_email'] = email
@@ -302,8 +311,11 @@ def signup():
 
 
 @auth_bp.route('/verify-otp', methods=['GET', 'POST'])
-@limiter.limit("5 per minute", methods=["POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def verify_otp():
+    vpn_blocked = block_if_vpn()
+    if vpn_blocked:
+        return vpn_blocked
     user_id = session.get('pending_user_id')
     email = session.get('pending_email')
     
@@ -331,7 +343,7 @@ def verify_otp():
             flash('Too many incorrect verification attempts. The code has been invalidated. Please request a new code.', 'error')
             return render_template('verify_otp.html', email=email, user=user)
 
-        if otp_entered == expected_otp:
+        if check_otp(otp_entered, expected_otp):
             execute_db('UPDATE users SET is_active = 1, failed_login_count = 0, locked_until = NULL WHERE id = %s', (user['id'],))
             flow = session.pop('otp_flow', 'signup')
             session.pop('pending_otp', None)
@@ -346,6 +358,7 @@ def verify_otp():
             session['username'] = user['username']
             session['role'] = user['role']
             session['session_version'] = user.get('session_version', 1)
+            session['lang'] = user.get('lang_pref') or session.get('lang', 'en')
             log_audit('login_verified' if flow == 'login' else 'signup_verified', 'user', user['id'])
             create_notification(
                 user['id'],
@@ -372,7 +385,7 @@ def verify_otp():
 
 
 @auth_bp.route('/resend-otp', methods=['POST'])
-@limiter.limit("2 per minute", methods=["POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def resend_otp():
     user_id = session.get('pending_user_id')
     email = session.get('pending_email')
@@ -383,7 +396,7 @@ def resend_otp():
         return redirect(url_for('auth.login'))
 
     otp_code = str(secrets.randbelow(900000) + 100000)
-    session['pending_otp'] = otp_code
+    session['pending_otp'] = hash_otp(otp_code)
     session['pending_otp_expires'] = time.time() + 600
     session['otp_attempts'] = 0
 
@@ -489,10 +502,14 @@ def phc_login():
 
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-@limiter.limit("3 per minute; 10 per hour", methods=["POST"])
+@limiter.limit("10 per minute; 30 per hour", methods=["POST"])
 def forgot_password():
     if 'user_id' in session:
         return redirect(url_for('auth.app_redirect'))
+
+    vpn_blocked = block_if_vpn()
+    if vpn_blocked:
+        return vpn_blocked
 
     if request.method == 'POST':
         identifier = request.form.get('identifier', '').strip()
@@ -515,7 +532,7 @@ def forgot_password():
             return render_template('forgot_password.html', identifier=identifier)
 
         otp_code = str(secrets.randbelow(900000) + 100000)
-        session['reset_otp'] = otp_code
+        session['reset_otp'] = hash_otp(otp_code)
         session['reset_otp_expires'] = time.time() + 600
         session['reset_user_id'] = user['id']
         session['reset_email'] = user['email']
@@ -532,8 +549,11 @@ def forgot_password():
 
 
 @auth_bp.route('/reset-password', methods=['GET', 'POST'])
-@limiter.limit("5 per minute", methods=["POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def reset_password():
+    vpn_blocked = block_if_vpn()
+    if vpn_blocked:
+        return vpn_blocked
     reset_user_id = session.get('reset_user_id')
     reset_email = session.get('reset_email')
     is_verified = session.get('reset_otp_verified', False)
@@ -565,7 +585,7 @@ def reset_password():
                 flash('Too many incorrect verification attempts. The reset code has been invalidated. Please request a new code.', 'error')
                 return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
 
-            if otp_entered != expected_otp:
+            if not check_otp(otp_entered, expected_otp):
                 remaining = 5 - attempts
                 flash(f'Incorrect 6-digit verification code. {remaining} attempt(s) remaining.', 'error')
                 return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
@@ -608,7 +628,7 @@ def reset_password():
 
 
 @auth_bp.route('/resend-reset-otp', methods=['POST'])
-@limiter.limit("2 per minute", methods=["POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def resend_reset_otp():
     reset_user_id = session.get('reset_user_id')
     reset_email = session.get('reset_email')
@@ -619,7 +639,7 @@ def resend_reset_otp():
         return redirect(url_for('auth.forgot_password'))
 
     otp_code = str(secrets.randbelow(900000) + 100000)
-    session['reset_otp'] = otp_code
+    session['reset_otp'] = hash_otp(otp_code)
     session['reset_otp_expires'] = time.time() + 600
     session['reset_otp_verified'] = False
     session['reset_attempts'] = 0

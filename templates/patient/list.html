@@ -45,7 +45,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
                 <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Total Patients</span>
                 <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 16px;">
-                    👥
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </span>
             </div>
             <div>
@@ -58,7 +58,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
                 <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">High-Risk Flags</span>
                 <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--red-bg); color: var(--red); display: flex; align-items: center; justify-content: center; font-size: 16px;">
-                    ⚠️
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                 </span>
             </div>
             <div>
@@ -71,7 +71,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
                 <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Demographics</span>
                 <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 16px;">
-                    📊
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                 </span>
             </div>
             <div>
@@ -94,12 +94,12 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
                 <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Active Network</span>
                 <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--amber-bg); color: var(--amber); display: flex; align-items: center; justify-content: center; font-size: 16px;">
-                    🏥
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"></rect><line x1="12" y1="10" x2="12" y2="14"></line><line x1="10" y1="12" x2="14" y2="12"></line></svg>
                 </span>
             </div>
             <div>
                 <div style="font-size: 1.85rem; font-weight: 800; color: var(--navy); line-height: 1.1;">{{ stats.centers_count if stats else (centers|length if centers else 1) }}</div>
-                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">PHCs, CHCs & District Hospitals</div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">PHCs, SubCentres & District Hospitals</div>
             </div>
         </div>
 
@@ -235,11 +235,11 @@
 
                                                 <td style="padding: 14px 18px; vertical-align: middle;">
                             <div style="font-weight: 600; font-size: var(--fs-xs); color: var(--ink);">
-                                📞 {{ pat.phone or 'No phone' }}
+                                 {{ pat.phone or 'No phone' }}
                             </div>
                             {% if pat.address %}
                             <div style="font-size: 11px; color: var(--muted); margin-top: 3px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ pat.address }}">
-                                📍 {{ pat.address }}
+                                 {{ pat.address }}
                             </div>
                             {% endif %}
                         </td>
@@ -247,7 +247,7 @@
                                                 <td style="padding: 14px 18px; vertical-align: middle;">
                             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                 <span style="background: #fee2e2; color: #b91c1c; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #fca5a5;">
-                                    🩸 {{ pat.blood_group or 'O+' }}
+                                    {{ pat.blood_group or 'O+' }}
                                 </span>
                                 {% if pat.is_high_risk %}
                                 <span style="background: #fef2f2; color: #dc2626; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #fecaca;">
@@ -264,7 +264,7 @@
 
                                                 <td style="padding: 14px 18px; vertical-align: middle;">
                             <span style="font-size: var(--fs-xs); font-weight: 600; color: var(--navy); display: inline-flex; align-items: center; gap: 4px;">
-                                🏥 {{ pat.facility_name or pat.facility_id or 'General Network' }}
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"></rect><line x1="12" y1="10" x2="12" y2="14"></line><line x1="10" y1="12" x2="14" y2="12"></line></svg> {{ pat.facility_name or pat.facility_id or 'General Network' }}
                             </span>
                             {% if pat.facility_region %}
                             <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">
@@ -308,7 +308,7 @@
         {% else %}
                 <div style="text-align: center; padding: var(--sp-12) var(--sp-6);">
             <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--sky); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto var(--sp-4);">
-                🔍
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
             <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--navy); margin-bottom: 6px;">No Patient Records Found</h3>
             <p style="color: var(--muted); font-size: var(--fs-sm); max-width: 440px; margin: 0 auto var(--sp-5);">
@@ -362,7 +362,7 @@
                         <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
                             Date of Birth <span style="color: var(--red);">*</span>
                         </label>
-                        <input type="date" name="dob" required style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                        <input type="date" name="dob" required min="1900-01-01" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
                     </div>
                 </div>
 

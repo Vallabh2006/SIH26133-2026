@@ -10,12 +10,13 @@ if not _secret_key:
 class Config:
     SECRET_KEY = _secret_key
 
-    MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
-    MYSQL_PORT = int(os.getenv('MYSQL_PORT', 3306))
-    MYSQL_USER = os.getenv('MYSQL_USER', 'root')
-    MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
-    MYSQL_DB = os.getenv('MYSQL_DB', 'rural_health_db')
-    MYSQL_CURSORCLASS = 'DictCursor'
+    DB_TYPE = os.getenv('DB_TYPE', 'postgres')
+    PG_HOST = os.getenv('PG_HOST', os.getenv('PGHOST', '/tmp'))
+    PG_PORT = int(os.getenv('PG_PORT', os.getenv('PGPORT', 5432)))
+    PG_USER = os.getenv('PG_USER', os.getenv('PGUSER', 'vallabh'))
+    PG_PASSWORD = os.getenv('PG_PASSWORD', os.getenv('PGPASSWORD', ''))
+    PG_DB = os.getenv('PG_DB', os.getenv('PGDATABASE', 'postgres'))
+    PG_SSLMODE = os.getenv('PG_SSLMODE')
 
     SESSION_TYPE = os.getenv('SESSION_TYPE', 'filesystem')
     SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), '.flask_sessions')
@@ -23,15 +24,26 @@ class Config:
     PERMANENT_SESSION_LIFETIME = 3600
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    _redis_url = os.getenv('SESSION_REDIS')
+    if SESSION_TYPE == 'redis' and _redis_url:
+        import redis
+        SESSION_REDIS = redis.from_url(_redis_url)
 
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
     OTP_ISSUER = 'Anvaya Vistara'
-    OTP_VALIDITY_SECONDS = 300
+    OTP_VALIDITY_SECONDS = int(os.getenv('OTP_VALIDITY_SECONDS', 600))
+
+    RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'true').lower() == 'true'
+    RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '1000 per hour; 200 per minute')
+    RATELIMIT_STORAGE_URI = os.getenv('RATELIMIT_STORAGE_URI', 'memory://')
+    BLOCK_VPN = os.getenv('BLOCK_VPN', 'true').lower() == 'true'
 
 class DevConfig(Config):
     DEBUG = True
     TESTING = False
+    RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'false').lower() == 'true'
+    RATELIMIT_DEFAULT = '5000 per hour; 1000 per minute'
 
 class ProdConfig(Config):
     DEBUG = False
@@ -39,11 +51,13 @@ class ProdConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    RATELIMIT_ENABLED = True
 
 class TestConfig(Config):
     DEBUG = False
     TESTING = True
     WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False
 
 config_map = {
     'development': DevConfig,

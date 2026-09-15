@@ -1,100 +1,101 @@
 center_id,item_name,category,quantity,unit,reorder_level,expiry_date
-FAC-BAKROL-01,Paracetamol 500mg Tablets,Analgesic,500,tablets,100,2027-12-31
-FAC-BAKROL-01,Amoxicillin 250mg Capsules,Antibiotic,250,capsules,50,2027-06-30
-FAC-BAKROL-01,Amoxicillin 500mg,Antibiotic,800,capsules,150,2027-09-30
-FAC-BAKROL-01,Azithromycin 500mg,Antibiotic,450,tablets,100,2027-11-30
-FAC-BAKROL-01,Cetirizine 10mg,Antihistamine,2000,tablets,300,2028-03-31
-FAC-BAKROL-01,ORS Sachets,Rehydration,3500,sachets,500,2028-12-31
-FAC-BAKROL-01,Vitamin C 500mg,Supplement,1500,tablets,200,2028-05-31
-FAC-BAKROL-01,Calcium 500mg,Supplement,900,tablets,150,2028-02-29
-FAC-BAKROL-01,Iron Folic Acid,Supplement,2200,tablets,300,2028-08-31
-FAC-BAKROL-01,Metformin 500mg,Antidiabetic,1100,tablets,200,2028-04-30
-FAC-BAKROL-01,Amlodipine 5mg,Antihypertensive,750,tablets,100,2028-07-31
-FAC-BAKROL-01,Diclofenac Gel,Analgesic,90,tubes,100,2028-01-31
-FAC-BAKROL-01,Ranitidine 150mg,Gastrointestinal,320,tablets,80,2026-10-31
-FAC-BVM-07,Paracetamol 500mg,Analgesic,600,tablets,100,2028-06-30
-FAC-BVM-07,Ibuprofen 400mg,Analgesic,400,tablets,80,2028-05-31
-FAC-BVM-07,Amoxicillin 500mg,Antibiotic,350,capsules,75,2027-10-31
-FAC-BVM-07,Cough Syrup,Respiratory,150,bottles,30,2027-12-31
-FAC-BVM-07,ORS Sachets,Rehydration,900,sachets,150,2028-11-30
-FAC-BVM-07,Cetirizine 10mg,Antihistamine,700,tablets,100,2028-04-30
-FAC-BVM-07,Omeprazole 20mg,Gastrointestinal,300,capsules,60,2028-08-31
-FAC-BVM-07,Multivitamin Tablets,Supplement,500,tablets,100,2028-03-31
-FAC-BVM-07,Metronidazole 400mg,Antibiotic,280,tablets,50,2027-09-30
-FAC-BVM-07,Antiseptic Solution,Antiseptic,200,bottles,40,2028-07-31
-FAC-BVM-07,Gauze Pads,Medical Supplies,600,pieces,100,2029-06-30
-FAC-BVM-07,Examination Gloves,Medical Supplies,2000,pairs,300,2030-06-30
-FAC-BVM-07,Thermometer Digital,Medical Equipment,10,pieces,3,2035-12-31
-FAC-CIVIL-08,Normal Saline 0.9% IV 500ml,IV Fluids,800,bottles,150,2027-12-31
-FAC-CIVIL-08,Ringer Lactate 500ml,IV Fluids,600,bags,100,2028-02-28
-FAC-CIVIL-08,Dextrose 5% 500ml,IV Fluids,500,bags,100,2028-03-31
-FAC-CIVIL-08,Surgical Gloves,Medical Supplies,6000,pairs,1000,2030-12-31
-FAC-CIVIL-08,Suture Kit,Medical Supplies,300,kits,60,2029-06-30
-FAC-CIVIL-08,IV Cannula 20G,Medical Supplies,900,pieces,150,2030-06-30
-FAC-CIVIL-08,Ceftriaxone 1g Injection,Antibiotic,400,vials,80,2027-08-31
-FAC-CIVIL-08,Tramadol 50mg Injection,Analgesic,250,vials,50,2027-10-31
-FAC-CIVIL-08,Adrenaline Injection,Emergency,150,ampoules,30,2027-06-30
-FAC-CIVIL-08,Oxygen Cylinder Refill,Medical Equipment,40,cylinders,10,2032-12-31
-FAC-CIVIL-08,Blood Bag CPDA 450ml,Medical Supplies,200,bags,40,2027-05-31
-FAC-CIVIL-08,Face Masks,Medical Supplies,8000,pieces,1500,2030-12-31
-FAC-CIVIL-08,Digital BP Monitor,Medical Equipment,15,pieces,5,2035-12-31
-FAC-GAMDI-05,Paracetamol Syrup,Analgesic,280,bottles,50,2027-11-30
-FAC-GAMDI-05,Amoxicillin 500mg,Antibiotic,420,capsules,80,2027-09-30
-FAC-GAMDI-05,ORS Sachets,Rehydration,1500,sachets,250,2028-10-31
-FAC-GAMDI-05,Cetirizine 10mg,Antihistamine,900,tablets,150,2028-05-31
-FAC-GAMDI-05,Iron Folic Acid,Supplement,1100,tablets,200,2028-07-31
-FAC-GAMDI-05,Zinc 20mg,Supplement,800,tablets,150,2028-06-30
-FAC-GAMDI-05,Metformin 500mg,Antidiabetic,600,tablets,120,2028-04-30
-FAC-GAMDI-05,Losartan 50mg,Antihypertensive,450,tablets,90,2028-03-31
-FAC-GAMDI-05,Salbutamol Inhaler,Respiratory,60,inhalers,15,2028-01-31
-FAC-GAMDI-05,Antiseptic Solution,Antiseptic,180,bottles,30,2028-08-31
-FAC-GAMDI-05,Adhesive Bandage,Medical Supplies,700,pieces,120,2029-12-31
-FAC-GAMDI-05,Examination Gloves,Medical Supplies,1500,pairs,250,2030-06-30
-FAC-KARAMSAD-03,Cefixime 200mg,Antibiotic,350,tablets,75,2028-03-31
-FAC-KARAMSAD-03,Doxycycline 100mg,Antibiotic,300,capsules,60,2028-05-31
-FAC-KARAMSAD-03,Paracetamol 500mg,Analgesic,900,tablets,150,2028-06-30
-FAC-KARAMSAD-03,Ibuprofen 400mg,Analgesic,650,tablets,120,2028-05-31
-FAC-KARAMSAD-03,ORS Sachets,Rehydration,1200,sachets,200,2028-09-30
-FAC-KARAMSAD-03,Calcium 500mg,Supplement,700,tablets,120,2028-02-28
-FAC-KARAMSAD-03,Vitamin D3 Tablets,Supplement,500,tablets,100,2028-07-31
-FAC-KARAMSAD-03,Insulin 40IU,Antidiabetic,60,vials,15,2027-12-31
-FAC-KARAMSAD-03,Furosemide 40mg,Diuretic,220,tablets,40,2028-08-31
-FAC-KARAMSAD-03,Normal Saline 500ml,IV Fluids,250,bags,50,2027-12-31
-FAC-KARAMSAD-03,Syringes 5ml,Medical Supplies,1800,pieces,300,2030-06-30
-FAC-KARAMSAD-03,Hydrocortisone Cream,Dermatological,150,tubes,25,2028-08-31
-FAC-SKH-02,Normal Saline 0.9% IV 500ml,IV Fluids,100,bottles,30,2027-10-31
-FAC-SKH-02,Ringer Lactate 500ml,IV Fluids,350,bags,60,2028-01-31
-FAC-SKH-02,Dextrose 5% 500ml,IV Fluids,300,bags,60,2028-02-29
-FAC-SKH-02,Ceftriaxone 1g Injection,Antibiotic,300,vials,60,2027-09-30
-FAC-SKH-02,Metronidazole IV 500ml,Antibiotic,200,bottles,40,2027-11-30
-FAC-SKH-02,Surgical Gloves,Medical Supplies,4000,pairs,700,2030-12-31
-FAC-SKH-02,Suture Kit,Medical Supplies,250,kits,50,2029-06-30
-FAC-SKH-02,IV Cannula 20G,Medical Supplies,500,pieces,100,2030-06-30
-FAC-SKH-02,Oxygen Cylinder Refill,Medical Equipment,30,cylinders,8,2032-12-31
-FAC-SKH-02,Digital BP Monitor,Medical Equipment,20,pieces,5,2035-12-31
-FAC-SKH-02,Nebulizer Kit,Medical Equipment,15,pieces,5,2032-12-31
-FAC-SKH-02,Blood Bag CPDA 450ml,Medical Supplies,150,bags,30,2027-05-31
-FAC-VVN-04,Paracetamol 500mg,Analgesic,700,tablets,120,2028-06-30
-FAC-VVN-04,Amoxicillin 500mg,Antibiotic,400,capsules,80,2027-09-30
-FAC-VVN-04,Cetirizine 10mg,Antihistamine,850,tablets,150,2028-04-30
-FAC-VVN-04,ORS Sachets,Rehydration,1300,sachets,200,2028-10-31
-FAC-VVN-04,Iron Folic Acid,Supplement,900,tablets,150,2028-07-31
-FAC-VVN-04,Multivitamin Syrup,Supplement,180,bottles,30,2027-11-30
-FAC-VVN-04,Omeprazole 20mg,Gastrointestinal,500,capsules,90,2028-08-31
-FAC-VVN-04,Domperidone 10mg,Gastrointestinal,300,tablets,60,2027-12-31
-FAC-VVN-04,Salbutamol Inhaler,Respiratory,50,inhalers,15,2028-01-31
-FAC-VVN-04,Antiseptic Solution,Antiseptic,220,bottles,40,2028-07-31
-FAC-VVN-04,Cotton Roll 500g,Medical Supplies,200,rolls,40,2029-12-31
-FAC-VVN-04,Face Masks,Medical Supplies,3000,pieces,500,2030-12-31
-FAC-ZYDUS-06,Normal Saline 0.9% IV 500ml,IV Fluids,600,bottles,100,2027-12-31
-FAC-ZYDUS-06,Ringer Lactate 500ml,IV Fluids,500,bags,90,2028-02-28
-FAC-ZYDUS-06,Adrenaline Injection,Emergency,180,ampoules,35,2027-06-30
-FAC-ZYDUS-06,Tramadol 50mg Injection,Analgesic,300,vials,60,2027-10-31
-FAC-ZYDUS-06,Ceftriaxone 1g Injection,Antibiotic,500,vials,90,2027-08-31
-FAC-ZYDUS-06,Surgical Gloves,Medical Supplies,5500,pairs,900,2030-12-31
-FAC-ZYDUS-06,Suture Kit,Medical Supplies,280,kits,55,2029-06-30
-FAC-ZYDUS-06,Blood Bag CPDA 450ml,Medical Supplies,220,bags,40,2027-05-31
-FAC-ZYDUS-06,Oxygen Cylinder Refill,Medical Equipment,50,cylinders,12,2032-12-31
-FAC-ZYDUS-06,Digital BP Monitor,Medical Equipment,18,pieces,5,2035-12-31
-FAC-ZYDUS-06,Nebulizer Kit,Medical Equipment,20,pieces,5,2032-12-31
-FAC-ZYDUS-06,IV Cannula 20G,Medical Supplies,700,pieces,120,2030-06-30
+FAC-BAKROL-01,Diclofenac Gel,Analgesic,180,tubes,100,2028-01-31
+FAC-BAKROL-01,Paracetamol 500mg Tablets,Analgesic,1000,tablets,100,2027-12-31
+FAC-BAKROL-01,Amoxicillin 250mg Capsules,Antibiotic,500,capsules,50,2027-06-30
+FAC-BAKROL-01,Amoxicillin 500mg,Antibiotic,1600,capsules,150,2027-09-30
+FAC-BAKROL-01,Azithromycin 500mg,Antibiotic,900,tablets,100,2027-11-30
+FAC-BAKROL-01,Metformin 500mg,Antidiabetic,2200,tablets,200,2028-04-30
+FAC-BAKROL-01,Cetirizine 10mg,Antihistamine,4000,tablets,300,2028-03-31
+FAC-BAKROL-01,Amlodipine 5mg,Antihypertensive,1500,tablets,100,2028-07-31
+FAC-BAKROL-01,Ranitidine 150mg,Gastrointestinal,640,tablets,80,2026-10-31
+FAC-BAKROL-01,ORS Sachets,Rehydration,7000,sachets,500,2028-12-31
+FAC-BAKROL-01,Calcium 500mg,Supplement,1800,tablets,150,2028-02-29
+FAC-BAKROL-01,Iron Folic Acid,Supplement,4400,tablets,300,2028-08-31
+FAC-BAKROL-01,Vitamin C 500mg,Supplement,3000,tablets,200,2028-05-31
+FAC-BVM-07,Ibuprofen 400mg,Analgesic,800,tablets,80,2028-05-31
+FAC-BVM-07,Paracetamol 500mg,Analgesic,1200,tablets,100,2028-06-30
+FAC-BVM-07,Amoxicillin 500mg,Antibiotic,700,capsules,75,2027-10-31
+FAC-BVM-07,Metronidazole 400mg,Antibiotic,560,tablets,50,2027-09-30
+FAC-BVM-07,Cetirizine 10mg,Antihistamine,1400,tablets,100,2028-04-30
+FAC-BVM-07,Antiseptic Solution,Antiseptic,400,bottles,40,2028-07-31
+FAC-BVM-07,Omeprazole 20mg,Gastrointestinal,600,capsules,60,2028-08-31
+FAC-BVM-07,Thermometer Digital,Medical Equipment,20,pieces,3,2035-12-31
+FAC-BVM-07,Examination Gloves,Medical Supplies,4000,pairs,300,2030-06-30
+FAC-BVM-07,Gauze Pads,Medical Supplies,1200,pieces,100,2029-06-30
+FAC-BVM-07,ORS Sachets,Rehydration,1800,sachets,150,2028-11-30
+FAC-BVM-07,Cough Syrup,Respiratory,300,bottles,30,2027-12-31
+FAC-BVM-07,Multivitamin Tablets,Supplement,1000,tablets,100,2028-03-31
+FAC-CIVIL-08,Tramadol 50mg Injection,Analgesic,500,vials,50,2027-10-31
+FAC-CIVIL-08,Ceftriaxone 1g Injection,Antibiotic,800,vials,80,2027-08-31
+FAC-CIVIL-08,Adrenaline Injection,Emergency,300,ampoules,30,2027-06-30
+FAC-CIVIL-08,Dextrose 5% 500ml,IV Fluids,1000,bags,100,2028-03-31
+FAC-CIVIL-08,Normal Saline 0.9% IV 500ml,IV Fluids,1600,bottles,150,2027-12-31
+FAC-CIVIL-08,Ringer Lactate 500ml,IV Fluids,1200,bags,100,2028-02-28
+FAC-CIVIL-08,Digital BP Monitor,Medical Equipment,30,pieces,5,2035-12-31
+FAC-CIVIL-08,Oxygen Cylinder Refill,Medical Equipment,80,cylinders,10,2032-12-31
+FAC-CIVIL-08,Blood Bag CPDA 450ml,Medical Supplies,400,bags,40,2027-05-31
+FAC-CIVIL-08,Face Masks,Medical Supplies,16000,pieces,1500,2030-12-31
+FAC-CIVIL-08,IV Cannula 20G,Medical Supplies,1800,pieces,150,2030-06-30
+FAC-CIVIL-08,Surgical Gloves,Medical Supplies,12000,pairs,1000,2030-12-31
+FAC-CIVIL-08,Suture Kit,Medical Supplies,600,kits,60,2029-06-30
+FAC-GAMDI-05,Paracetamol Syrup,Analgesic,560,bottles,50,2027-11-30
+FAC-GAMDI-05,Amoxicillin 500mg,Antibiotic,840,capsules,80,2027-09-30
+FAC-GAMDI-05,Metformin 500mg,Antidiabetic,1200,tablets,120,2028-04-30
+FAC-GAMDI-05,Cetirizine 10mg,Antihistamine,1800,tablets,150,2028-05-31
+FAC-GAMDI-05,Losartan 50mg,Antihypertensive,900,tablets,90,2028-03-31
+FAC-GAMDI-05,Antiseptic Solution,Antiseptic,360,bottles,30,2028-08-31
+FAC-GAMDI-05,Adhesive Bandage,Medical Supplies,1400,pieces,120,2029-12-31
+FAC-GAMDI-05,Examination Gloves,Medical Supplies,3000,pairs,250,2030-06-30
+FAC-GAMDI-05,ORS Sachets,Rehydration,3000,sachets,250,2028-10-31
+FAC-GAMDI-05,Salbutamol Inhaler,Respiratory,120,inhalers,15,2028-01-31
+FAC-GAMDI-05,Iron Folic Acid,Supplement,2200,tablets,200,2028-07-31
+FAC-GAMDI-05,Zinc 20mg,Supplement,1600,tablets,150,2028-06-30
+FAC-KARAMSAD-03,Ibuprofen 400mg,Analgesic,1300,tablets,120,2028-05-31
+FAC-KARAMSAD-03,Paracetamol 500mg,Analgesic,1800,tablets,150,2028-06-30
+FAC-KARAMSAD-03,Cefixime 200mg,Antibiotic,700,tablets,75,2028-03-31
+FAC-KARAMSAD-03,Doxycycline 100mg,Antibiotic,600,capsules,60,2028-05-31
+FAC-KARAMSAD-03,Insulin 40IU,Antidiabetic,120,vials,15,2027-12-31
+FAC-KARAMSAD-03,Hydrocortisone Cream,Dermatological,300,tubes,25,2028-08-31
+FAC-KARAMSAD-03,Furosemide 40mg,Diuretic,440,tablets,40,2028-08-31
+FAC-KARAMSAD-03,Normal Saline 500ml,IV Fluids,500,bags,50,2027-12-31
+FAC-KARAMSAD-03,Syringes 5ml,Medical Supplies,3600,pieces,300,2030-06-30
+FAC-KARAMSAD-03,ORS Sachets,Rehydration,2400,sachets,200,2028-09-30
+FAC-KARAMSAD-03,Calcium 500mg,Supplement,1400,tablets,120,2028-02-28
+FAC-KARAMSAD-03,Vitamin D3 Tablets,Supplement,1000,tablets,100,2028-07-31
+FAC-SKH-02,Ceftriaxone 1g Injection,Antibiotic,600,vials,60,2027-09-30
+FAC-SKH-02,Metronidazole IV 500ml,Antibiotic,400,bottles,40,2027-11-30
+FAC-SKH-02,Dextrose 5% 500ml,IV Fluids,600,bags,60,2028-02-29
+FAC-SKH-02,Normal Saline 0.9% IV 500ml,IV Fluids,200,bottles,30,2027-10-31
+FAC-SKH-02,Ringer Lactate 500ml,IV Fluids,700,bags,60,2028-01-31
+FAC-SKH-02,Digital BP Monitor,Medical Equipment,40,pieces,5,2035-12-31
+FAC-SKH-02,Nebulizer Kit,Medical Equipment,30,pieces,5,2032-12-31
+FAC-SKH-02,Oxygen Cylinder Refill,Medical Equipment,60,cylinders,8,2032-12-31
+FAC-SKH-02,Blood Bag CPDA 450ml,Medical Supplies,300,bags,30,2027-05-31
+FAC-SKH-02,IV Cannula 20G,Medical Supplies,1000,pieces,100,2030-06-30
+FAC-SKH-02,Surgical Gloves,Medical Supplies,8000,pairs,700,2030-12-31
+FAC-SKH-02,Suture Kit,Medical Supplies,500,kits,50,2029-06-30
+FAC-VVN-04,Paracetamol 500mg,Analgesic,1400,tablets,120,2028-06-30
+FAC-VVN-04,Amoxicillin 500mg,Antibiotic,800,capsules,80,2027-09-30
+FAC-VVN-04,Cetirizine 10mg,Antihistamine,1700,tablets,150,2028-04-30
+FAC-VVN-04,Antiseptic Solution,Antiseptic,440,bottles,40,2028-07-31
+FAC-VVN-04,Domperidone 10mg,Gastrointestinal,600,tablets,60,2027-12-31
+FAC-VVN-04,Omeprazole 20mg,Gastrointestinal,1000,capsules,90,2028-08-31
+FAC-VVN-04,Cotton Roll 500g,Medical Supplies,400,rolls,40,2029-12-31
+FAC-VVN-04,Face Masks,Medical Supplies,6000,pieces,500,2030-12-31
+FAC-VVN-04,ORS Sachets,Rehydration,2600,sachets,200,2028-10-31
+FAC-VVN-04,Salbutamol Inhaler,Respiratory,100,inhalers,15,2028-01-31
+FAC-VVN-04,Iron Folic Acid,Supplement,1800,tablets,150,2028-07-31
+FAC-VVN-04,Multivitamin Syrup,Supplement,360,bottles,30,2027-11-30
+FAC-ZYDUS-06,Tramadol 50mg Injection,Analgesic,600,vials,60,2027-10-31
+FAC-ZYDUS-06,Ceftriaxone 1g Injection,Antibiotic,1000,vials,90,2027-08-31
+FAC-ZYDUS-06,Adrenaline Injection,Emergency,360,ampoules,35,2027-06-30
+FAC-ZYDUS-06,Normal Saline 0.9% IV 500ml,IV Fluids,1200,bottles,100,2027-12-31
+FAC-ZYDUS-06,Ringer Lactate 500ml,IV Fluids,1000,bags,90,2028-02-28
+FAC-ZYDUS-06,Digital BP Monitor,Medical Equipment,36,pieces,5,2035-12-31
+FAC-ZYDUS-06,Nebulizer Kit,Medical Equipment,60,pieces,5,2032-12-31
+FAC-ZYDUS-06,Oxygen Cylinder Refill,Medical Equipment,100,cylinders,12,2032-12-31
+FAC-ZYDUS-06,Blood Bag CPDA 450ml,Medical Supplies,440,bags,40,2027-05-31
+FAC-ZYDUS-06,DEXTROMETHORPHAN 100G,Medical Supplies,700,pieces,120,2030-06-30
+FAC-ZYDUS-06,IV Cannula 20G,Medical Supplies,1400,pieces,120,2030-06-30
+FAC-ZYDUS-06,Surgical Gloves,Medical Supplies,11000,pairs,900,2030-12-31
+FAC-ZYDUS-06,Suture Kit,Medical Supplies,560,kits,55,2029-06-30

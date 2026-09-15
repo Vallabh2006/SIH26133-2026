@@ -103,8 +103,7 @@
     <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="type-filters">
         <button class="filter-chip active" onclick="filterType('ALL', this)">All Centres ({{ facilities|length }})</button>
         <button class="filter-chip" onclick="filterType('PHC', this)">Primary Care (PHC)</button>
-        <button class="filter-chip" onclick="filterType('CHC', this)">Community Hospital (CHC)</button>
-        <button class="filter-chip" onclick="filterType('DH', this)">District Hospital (DH)</button>
+                <button class="filter-chip" onclick="filterType('DH', this)">District Hospital (DH)</button>
         <button class="filter-chip" onclick="filterType('Dispensary', this)">Dispensaries</button>
     </div>
 
@@ -238,7 +237,7 @@ function initMap() {
 
     const typeColors = {
         'PHC': '#0369a1',
-        'CHC': '#16a34a',
+        
         'DH': '#dc2626',
         'Dispensary': '#b45309',
         'SubCentre': '#6d28d9'

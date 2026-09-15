@@ -308,7 +308,7 @@ def init_permissions_db():
             CREATE TABLE IF NOT EXISTS role_permissions (
                 role VARCHAR(50) NOT NULL,
                 action VARCHAR(100) NOT NULL,
-                is_allowed TINYINT(1) NOT NULL DEFAULT 1,
+                is_allowed SMALLINT NOT NULL DEFAULT 1,
                 PRIMARY KEY (role, action)
             )
         ''')
@@ -316,7 +316,7 @@ def init_permissions_db():
         if not existing or existing.get('cnt', 0) == 0:
             for r_key, actions in DEFAULT_ROLE_PERMISSIONS.items():
                 for a_key, allowed in actions.items():
-                    execute_db('INSERT IGNORE INTO role_permissions (role, action, is_allowed) VALUES (%s, %s, %s)', (r_key, a_key, allowed))
+                    execute_db('INSERT INTO role_permissions (role, action, is_allowed) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING', (r_key, a_key, allowed))
     except Exception:
         pass
 

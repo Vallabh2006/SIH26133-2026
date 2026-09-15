@@ -57,25 +57,57 @@ function showToast(message, type = 'info', duration = 4000) {
 }
 
 function openModal(modalId) {
-  const modal = document.getElementById(modalId);
+  const modal = typeof modalId === 'string' ? document.getElementById(modalId) : modalId;
   if (modal) {
+    modal.style.display = '';
     modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    const firstInput = modal.querySelector('input:not([type=hidden]), select, textarea');
+    if (firstInput) {
+      setTimeout(() => firstInput.focus(), 100);
+    }
   }
 }
 
 function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
+  const modal = typeof modalId === 'string' ? document.getElementById(modalId) : modalId;
   if (modal) {
+    modal.style.display = '';
     modal.classList.remove('open');
-    document.body.style.overflow = '';
+    modal.setAttribute('aria-hidden', 'true');
+    const remainingOpen = document.querySelectorAll('.modal.open');
+    if (remainingOpen.length === 0) {
+      document.body.style.overflow = '';
+    }
   }
 }
 
+window.openModal = openModal;
+window.closeModal = closeModal;
+
 document.addEventListener('click', (e) => {
+  const closeBtn = e.target.closest('[data-modal-close], .modal-close');
+  if (closeBtn) {
+    const modalId = closeBtn.getAttribute('data-modal-close');
+    if (modalId) {
+      closeModal(modalId);
+    } else {
+      const parentModal = closeBtn.closest('.modal');
+      if (parentModal) closeModal(parentModal);
+    }
+    return;
+  }
+
+  const openBtn = e.target.closest('[data-modal-target]');
+  if (openBtn) {
+    const modalId = openBtn.getAttribute('data-modal-target');
+    if (modalId) openModal(modalId);
+    return;
+  }
+
   if (e.target.classList.contains('modal') && e.target.classList.contains('open')) {
-    e.target.classList.remove('open');
-    document.body.style.overflow = '';
+    closeModal(e.target);
   }
 });
 
@@ -83,8 +115,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const openModals = document.querySelectorAll('.modal.open');
     openModals.forEach((m) => {
-      m.classList.remove('open');
-      document.body.style.overflow = '';
+      closeModal(m);
     });
     toggleSidebar(false);
   }

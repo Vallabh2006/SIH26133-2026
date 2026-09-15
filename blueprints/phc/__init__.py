@@ -140,7 +140,7 @@ def queue():
     completed_list = [a for a in all_appointments if a.get('status') == 'completed']
 
     patients_list = query_db('SELECT id, full_name, dob, gender, blood_group FROM patients ORDER BY full_name ASC') or []
-    doctors_list = query_db('SELECT id, full_name, role, designation FROM users WHERE role IN ("doctor", "nurse") AND is_active = 1 ORDER BY full_name ASC') or []
+    doctors_list = query_db("SELECT id, full_name, role, designation FROM users WHERE role IN ('doctor', 'nurse') AND is_active = 1 ORDER BY full_name ASC") or []
 
     stats = {
         'total': len(all_appointments),
@@ -564,7 +564,7 @@ def teleconsult():
         LEFT JOIN patients p ON t.patient_id = p.id
         LEFT JOIN users u ON t.doctor_id = u.id
         LEFT JOIN centers c ON t.center_id = c.id
-        WHERE (t.center_id = %s OR t.doctor_id = %s OR %s)
+        WHERE (t.center_id = %s OR t.doctor_id = %s OR %s = 1)
         ORDER BY CASE t.status WHEN 'active' THEN 1 WHEN 'requested' THEN 2 ELSE 3 END, t.created_at DESC
     """, (center_id, user['id'], 1 if is_admin else 0)) or []
 
@@ -1017,7 +1017,7 @@ def export_inventory_csv():
 
 
 @phc_bp.route('/inventory/import', methods=['POST'])
-@limiter.limit("5 per hour")
+@limiter.limit("30 per hour")
 @role_required(*ALLOWED_ROLES)
 @permission_required('manage_inventory')
 def import_inventory_csv():
@@ -1122,9 +1122,14 @@ def download_inventory_template():
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['center_id', 'item_name', 'category', 'quantity', 'unit', 'reorder_level', 'expiry_date'])
-    writer.writerow(['FAC-BAKROL-01', 'Paracetamol 500mg Tablets', 'Analgesic', '500', 'tablets', '100', '2027-12-31'])
-    writer.writerow(['FAC-BAKROL-01', 'Amoxicillin 250mg Capsules', 'Antibiotic', '250', 'capsules', '50', '2027-06-30'])
-    writer.writerow(['FAC-SKH-02', 'Normal Saline 0.9% IV 500ml', 'IV Fluids', '100', 'bottles', '30', '2027-10-31'])
+    
+    active_centers = query_db('SELECT id FROM centers WHERE is_active = 1 ORDER BY id ASC LIMIT 2') or []
+    c1 = active_centers[0]['id'] if active_centers else 'FAC-BAKROL-01'
+    c2 = active_centers[1]['id'] if len(active_centers) > 1 else c1
+    
+    writer.writerow([c1, 'Paracetamol 500mg Tablets', 'Analgesic', '500', 'tablets', '100', '2027-12-31'])
+    writer.writerow([c1, 'Amoxicillin 250mg Capsules', 'Antibiotic', '250', 'capsules', '50', '2027-06-30'])
+    writer.writerow([c2, 'Normal Saline 0.9% IV 500ml', 'IV Fluids', '100', 'bottles', '30', '2027-10-31'])
     
     return Response(output.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=inventory_import_template.csv'})
 

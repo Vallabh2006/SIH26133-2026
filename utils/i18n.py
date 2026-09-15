@@ -1,8 +1,6 @@
-
-
 import json
 import os
-from flask import session, request
+from flask import session, request, g
 
 _translations = {}
 _fallback_lang = 'en'
@@ -23,9 +21,15 @@ def get_locale():
     lang = session.get('lang')
     if lang and lang in _translations:
         return lang
+    if 'current_user' in g and g.current_user and g.current_user.get('lang_pref') in _translations:
+        return g.current_user['lang_pref']
     lang = request.cookies.get('lang')
     if lang and lang in _translations:
         return lang
+    if request.accept_languages:
+        best = request.accept_languages.best_match(list(_translations.keys()))
+        if best:
+            return best
     return _fallback_lang
 
 
@@ -41,7 +45,6 @@ def translate(key, **kwargs):
             break
 
     if value is None:
-
         value = _translations.get(_fallback_lang, {})
         for part in key.split('.'):
             if isinstance(value, dict):
@@ -53,7 +56,7 @@ def translate(key, **kwargs):
     if value is None:
         return key
 
-    if kwargs:
+    if kwargs and isinstance(value, str):
         try:
             value = value.format(**kwargs)
         except (KeyError, IndexError):

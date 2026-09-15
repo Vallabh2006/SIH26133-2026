@@ -1,3 +1,4 @@
+import re
 import csv
 import io
 import json
@@ -334,7 +335,7 @@ def staff_resend_invite(user_id):
 @admin_bp.route('/staff/toggle-status/<int:user_id>', methods=['POST'])
 @role_required('system_admin', 'region_admin')
 def staff_toggle_status(user_id):
-    staff_member = query_db('SELECT * FROM users WHERE id = %s AND role != "patient"', (user_id,), one=True)
+    staff_member = query_db("SELECT * FROM users WHERE id = %s AND role != 'patient'", (user_id,), one=True)
     if not staff_member:
         flash('Staff member not found.', 'error')
         return redirect(url_for('admin.staff'))
@@ -351,7 +352,7 @@ def staff_toggle_status(user_id):
 @admin_bp.route('/staff/edit/<int:user_id>', methods=['POST'])
 @role_required('system_admin', 'region_admin')
 def staff_edit(user_id):
-    staff_member = query_db('SELECT * FROM users WHERE id = %s AND role != "patient"', (user_id,), one=True)
+    staff_member = query_db("SELECT * FROM users WHERE id = %s AND role != 'patient'", (user_id,), one=True)
     if not staff_member:
         flash('Staff member not found.', 'error')
         return redirect(url_for('admin.staff'))
@@ -424,6 +425,7 @@ def users():
 def facilities():
     user = get_current_user()
     fac_type = request.args.get('type', '').strip()
+    status_filter = request.args.get('status', '').strip()
     search_q = request.args.get('q', '').strip()
     
     query = '''
@@ -431,6 +433,7 @@ def facilities():
                (SELECT COUNT(*) FROM users u WHERE u.center_id = c.id) as staff_count,
                (SELECT COUNT(*) FROM inventory_items i WHERE i.center_id = c.id) as inventory_count,
                (SELECT COUNT(*) FROM patients p WHERE p.center_id = c.id) as patient_count,
+               (SELECT u.id FROM users u WHERE u.center_id = c.id AND u.role = 'region_admin' LIMIT 1) as admin_id,
                (SELECT u.username FROM users u WHERE u.center_id = c.id AND u.role = 'region_admin' LIMIT 1) as admin_username,
                (SELECT u.full_name FROM users u WHERE u.center_id = c.id AND u.role = 'region_admin' LIMIT 1) as admin_fullname,
                (SELECT u.email FROM users u WHERE u.center_id = c.id AND u.role = 'region_admin' LIMIT 1) as admin_email
@@ -442,6 +445,11 @@ def facilities():
     if fac_type and fac_type != 'all':
         query += ' AND c.type = %s'
         params.append(fac_type)
+
+    if status_filter == 'active':
+        query += ' AND c.is_active = 1'
+    elif status_filter == 'inactive':
+        query += ' AND c.is_active = 0'
         
     if search_q:
         query += ' AND (c.name LIKE %s OR c.id LIKE %s OR c.region LIKE %s OR c.state LIKE %s)'
@@ -449,9 +457,29 @@ def facilities():
         
     query += ' ORDER BY c.name ASC'
     facilities_list = query_db(query, tuple(params)) or []
+
+    all_staff = query_db("""
+        SELECT id, staff_id, username, full_name, role, designation, phone, email, is_active, center_id
+        FROM users
+        WHERE center_id IS NOT NULL
+        ORDER BY role ASC, full_name ASC
+    """) or []
+
+    for fac in facilities_list:
+        try:
+            fac['resources_parsed'] = json.loads(fac['resources']) if fac.get('resources') else {}
+        except Exception:
+            fac['resources_parsed'] = {}
+        fac['staff_list'] = [s for s in all_staff if s.get('center_id') == fac['id']]
     
     type_counts = query_db('SELECT type, COUNT(*) as count FROM centers GROUP BY type') or []
     type_stats = {item['type']: item['count'] for item in type_counts}
+
+    total_count_row = query_db('SELECT COUNT(*) as count FROM centers', one=True)
+    total_count = total_count_row['count'] if total_count_row else 0
+    active_count_row = query_db('SELECT COUNT(*) as count FROM centers WHERE is_active = 1', one=True)
+    active_count = active_count_row['count'] if active_count_row else 0
+    inactive_count = total_count - active_count
     
     available_admins = query_db("SELECT id, username, full_name, role, center_id FROM users WHERE role = 'region_admin' ORDER BY full_name ASC") or []
 
@@ -460,7 +488,11 @@ def facilities():
                            facilities=facilities_list,
                            type_stats=type_stats,
                            fac_type=fac_type,
+                           status_filter=status_filter,
                            search_q=search_q,
+                           total_count=total_count,
+                           active_count=active_count,
+                           inactive_count=inactive_count,
                            available_admins=available_admins)
 
 
@@ -492,7 +524,7 @@ def create_facility():
         flash('Facility Name and Physical Address are mandatory.', 'error')
         return redirect(url_for('admin.facilities'))
 
-    prefix = name.split()[0].replace('PHC', '').replace('CHC', '').strip()
+    prefix = re.sub(r'(?i)(phc|sdh|dh|subcentre|dispensary|hospital|centre|center)', '', name.split()[0]).strip() or name[:4].upper()
     fac_id = generate_facility_id(prefix)
 
     execute_db('''
@@ -501,6 +533,7 @@ def create_facility():
     ''', (fac_id, name, fac_type, region, state, address, lat, lng, phone, resources_json))
 
     admin_mode = request.form.get('admin_mode', 'new')
+    created_admin_pass = None
     if admin_mode == 'existing':
         existing_admin_id = request.form.get('assigned_admin_id')
         if existing_admin_id:
@@ -513,7 +546,11 @@ def create_facility():
             return redirect(url_for('admin.facilities'))
         admin_email = request.form.get('admin_email', '').strip()
         admin_phone = request.form.get('admin_phone', '').strip() or phone
-        admin_password = request.form.get('admin_password', '').strip() or 'adminpassword'
+        admin_password = request.form.get('admin_password', '').strip()
+
+        if not admin_password:
+            admin_password = secrets.token_urlsafe(10) + '1!'
+            created_admin_pass = admin_password
 
         if not admin_username:
             base_u = 'admin_' + ''.join(ch for ch in name.lower() if ch.isalnum())[:10]
@@ -535,7 +572,133 @@ def create_facility():
         ''', (staff_id, admin_username, pw_hash, admin_fullname, fac_id, admin_phone, admin_email))
 
     log_audit('facility_created', 'center', fac_id, f'Master Admin created facility {name} ({fac_id})')
-    flash(f'Health facility "{name}" ({fac_id}) successfully created and assigned to facility administrator!', 'success')
+    if created_admin_pass:
+        flash(f'Health facility "{name}" ({fac_id}) successfully created! Assigned Admin: @{admin_username} | Temporary Password: {created_admin_pass}', 'success')
+    else:
+        flash(f'Health facility "{name}" ({fac_id}) successfully created and assigned to facility administrator!', 'success')
+    return redirect(url_for('admin.facilities'))
+
+
+@admin_bp.route('/facilities/update/<facility_id>', methods=['POST'])
+@role_required('system_admin', 'region_admin')
+def update_facility(facility_id):
+    user = get_current_user()
+    if user['role'] == 'region_admin' and user.get('center_id') != facility_id:
+        flash('Unauthorized: You can only update your assigned health facility.', 'error')
+        return redirect(url_for('admin.facilities'))
+
+    facility = query_db('SELECT * FROM centers WHERE id = %s', (facility_id,), one=True)
+    if not facility:
+        flash('Facility not found.', 'error')
+        return redirect(url_for('admin.facilities'))
+
+    name = request.form.get('name', '').strip()
+    fac_type = request.form.get('type', facility['type']).strip()
+    region = request.form.get('region', facility['region'] or '').strip()
+    state = request.form.get('state', facility['state'] or '').strip()
+    address = request.form.get('address', facility['address'] or '').strip()
+    lat = request.form.get('lat', str(facility['lat'] or '22.5530000')).strip()
+    lng = request.form.get('lng', str(facility['lng'] or '72.9300000')).strip()
+    phone = request.form.get('phone', facility['phone'] or '').strip() or None
+
+    if not name or not address:
+        flash('Facility Name and Physical Address are mandatory.', 'error')
+        return redirect(url_for('admin.facilities'))
+
+    beds = int(request.form.get('beds', 0) or 0)
+    oxygen = int(request.form.get('oxygen', 0) or 0)
+    ambulance = int(request.form.get('ambulance', 0) or 0)
+    timings = request.form.get('timings', '24x7 Emergency / OPD 9AM - 5PM').strip()
+    emergency_24x7 = True if (request.form.get('emergency_24x7') in ('1', 'on', 'true', True)) else False
+    is_active = 1 if (request.form.get('is_active') in ('1', 'on', 'true', 1)) else 0
+
+    curr_resources = {}
+    if facility.get('resources'):
+        try:
+            curr_resources = json.loads(facility['resources'])
+        except Exception:
+            pass
+    curr_resources.update({
+        'beds': beds,
+        'oxygen': oxygen,
+        'ambulance': ambulance,
+        'timings': timings,
+        'emergency_24x7': emergency_24x7
+    })
+    resources_json = json.dumps(curr_resources)
+
+    execute_db('''
+        UPDATE centers
+        SET name = %s, type = %s, region = %s, state = %s, address = %s,
+            lat = %s, lng = %s, phone = %s, resources = %s, is_active = %s, updated_at = NOW()
+        WHERE id = %s
+    ''', (name, fac_type, region, state, address, lat, lng, phone, resources_json, is_active, facility_id))
+
+    if user['role'] == 'system_admin' and 'assigned_admin_id' in request.form:
+        assigned_admin_id = request.form.get('assigned_admin_id', '').strip()
+        if assigned_admin_id == 'unassign':
+            execute_db("UPDATE users SET center_id = NULL WHERE center_id = %s AND role = 'region_admin'", (facility_id,))
+        elif assigned_admin_id.isdigit():
+            execute_db("UPDATE users SET center_id = NULL WHERE center_id = %s AND role = 'region_admin'", (facility_id,))
+            execute_db("UPDATE users SET center_id = %s WHERE id = %s", (facility_id, int(assigned_admin_id)))
+
+    log_audit('facility_updated', 'center', facility_id, f'Admin @{user["username"]} updated facility {name} ({facility_id})')
+    flash(f'Facility "{name}" ({facility_id}) details and resources successfully updated.', 'success')
+    return redirect(url_for('admin.facilities'))
+
+
+@admin_bp.route('/facilities/toggle-status/<facility_id>', methods=['POST'])
+@role_required('system_admin')
+def toggle_facility_status(facility_id):
+    facility = query_db('SELECT * FROM centers WHERE id = %s', (facility_id,), one=True)
+    if not facility:
+        flash('Facility not found.', 'error')
+        return redirect(url_for('admin.facilities'))
+
+    new_status = 0 if facility.get('is_active') else 1
+    execute_db('UPDATE centers SET is_active = %s, updated_at = NOW() WHERE id = %s', (new_status, facility_id))
+
+    status_label = 'Activated' if new_status == 1 else 'Deactivated'
+    log_audit('facility_status_toggled', 'center', facility_id, f'Master Admin {status_label.lower()} facility {facility["name"]} ({facility_id})')
+    flash(f'Facility "{facility["name"]}" ({facility_id}) has been {status_label}.', 'success')
+    return redirect(url_for('admin.facilities'))
+
+
+@admin_bp.route('/facilities/reset-staff-password/<int:user_id>', methods=['POST'])
+@role_required('system_admin', 'region_admin')
+def reset_facility_staff_password(user_id):
+    current_admin = get_current_user()
+    target_user = query_db('SELECT * FROM users WHERE id = %s', (user_id,), one=True)
+    if not target_user:
+        flash('Staff member account not found.', 'error')
+        return redirect(url_for('admin.facilities'))
+
+    if current_admin['role'] == 'region_admin':
+        if target_user.get('center_id') != current_admin.get('center_id'):
+            flash('Unauthorized: You can only reset passwords for staff assigned to your facility.', 'error')
+            return redirect(url_for('admin.facilities'))
+
+    new_password = request.form.get('new_password', '').strip()
+    was_auto_generated = False
+    if not new_password:
+        new_password = secrets.token_urlsafe(10) + '1!'
+        was_auto_generated = True
+    elif len(new_password) < 8:
+        flash('Password must be at least 8 characters long.', 'error')
+        return redirect(url_for('admin.facilities'))
+
+    hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    new_version = (target_user.get('session_version') or 1) + 1
+    execute_db('UPDATE users SET password_hash = %s, session_version = %s, failed_login_count = 0, locked_until = NULL, updated_at = NOW() WHERE id = %s', 
+               (hashed, new_version, user_id))
+
+    admin_name = current_admin.get('username') if current_admin else 'admin'
+    log_audit('password_reset_by_admin', 'user', user_id, f'Admin @{admin_name} reset password for @{target_user["username"]}')
+
+    if was_auto_generated:
+        flash(f'Password for @{target_user["username"]} ({target_user.get("full_name") or target_user["username"]}) reset to: {new_password}', 'success')
+    else:
+        flash(f'Password for @{target_user["username"]} has been successfully updated.', 'success')
     return redirect(url_for('admin.facilities'))
 
 
@@ -582,7 +745,7 @@ def inventory():
     items = query_db(query, tuple(params)) or []
     
     centers = query_db('SELECT id, name, type FROM centers ORDER BY name ASC') or []
-    categories_raw = query_db('SELECT DISTINCT category FROM inventory_items WHERE category IS NOT NULL AND category != "" ORDER BY category ASC') or []
+    categories_raw = query_db("SELECT DISTINCT category FROM inventory_items WHERE category IS NOT NULL AND category != '' ORDER BY category ASC") or []
     categories = [c['category'] for c in categories_raw if c.get('category')]
     
     summary = {
@@ -668,7 +831,7 @@ def export_inventory_csv():
 
 
 @admin_bp.route('/inventory/import', methods=['POST'])
-@limiter.limit("5 per hour")
+@limiter.limit("30 per hour")
 @role_required('system_admin', 'region_admin')
 def import_inventory_csv():
     if 'file' not in request.files:
@@ -853,12 +1016,12 @@ def analytics():
     gender_rows = query_db('SELECT gender, COUNT(*) as cnt FROM patients WHERE gender IS NOT NULL GROUP BY gender') or []
     gender_tally = {r['gender']: r['cnt'] for r in gender_rows}
     
-    blood_rows = query_db('SELECT blood_group, COUNT(*) as cnt FROM patients WHERE blood_group IS NOT NULL AND blood_group != "" GROUP BY blood_group') or []
+    blood_rows = query_db("SELECT blood_group, COUNT(*) as cnt FROM patients WHERE blood_group IS NOT NULL AND blood_group != '' GROUP BY blood_group") or []
     blood_tally = {r['blood_group']: r['cnt'] for r in blood_rows}
     if not blood_tally:
         blood_tally = {'A+': 0, 'B+': 0, 'O+': 0, 'AB+': 0, 'A-': 0, 'B-': 0, 'O-': 0, 'AB-': 0}
         
-    conditions_rows = query_db('SELECT chronic_conditions FROM patients WHERE chronic_conditions IS NOT NULL AND chronic_conditions != ""') or []
+    conditions_rows = query_db("SELECT chronic_conditions FROM patients WHERE chronic_conditions IS NOT NULL AND chronic_conditions != ''") or []
     conditions_tally = {}
     for r in conditions_rows:
         conds = [c.strip() for c in r['chronic_conditions'].split(',') if c.strip()]
@@ -866,7 +1029,7 @@ def analytics():
             conditions_tally[c] = conditions_tally.get(c, 0) + 1
             
     top_meds_tally = {}
-    rx_rows = query_db('SELECT medicines FROM prescriptions WHERE medicines IS NOT NULL AND medicines != ""') or []
+    rx_rows = query_db("SELECT medicines FROM prescriptions WHERE medicines IS NOT NULL AND medicines != ''") or []
     import json
     for r in rx_rows:
         try:
@@ -891,7 +1054,7 @@ def analytics():
     patient_stats = {
         'total': total_patients,
         'high_risk': high_risk_count,
-        'active_last_30_days': (query_db('SELECT COUNT(DISTINCT patient_id) as cnt FROM medical_records WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)', one=True) or {}).get('cnt', 0)
+        'active_last_30_days': (query_db("SELECT COUNT(DISTINCT patient_id) as cnt FROM medical_records WHERE created_at >= NOW() - INTERVAL '30 days'", one=True) or {}).get('cnt', 0)
     }
     
     facility_activity = query_db('''
@@ -918,9 +1081,9 @@ def analytics():
     
     appointment_stats = {
         'total': (query_db('SELECT COUNT(*) as cnt FROM appointments', one=True) or {}).get('cnt', 0),
-        'scheduled': (query_db('SELECT COUNT(*) as cnt FROM appointments WHERE status = "scheduled"', one=True) or {}).get('cnt', 0),
-        'completed': (query_db('SELECT COUNT(*) as cnt FROM appointments WHERE status = "completed"', one=True) or {}).get('cnt', 0),
-        'cancelled': (query_db('SELECT COUNT(*) as cnt FROM appointments WHERE status = "cancelled"', one=True) or {}).get('cnt', 0)
+        'scheduled': (query_db("SELECT COUNT(*) as cnt FROM appointments WHERE status = 'scheduled'", one=True) or {}).get('cnt', 0),
+        'completed': (query_db("SELECT COUNT(*) as cnt FROM appointments WHERE status = 'completed'", one=True) or {}).get('cnt', 0),
+        'cancelled': (query_db("SELECT COUNT(*) as cnt FROM appointments WHERE status = 'cancelled'", one=True) or {}).get('cnt', 0)
     }
     
     return render_template('admin/analytics.html',
@@ -1091,7 +1254,23 @@ def permissions():
         query += ' AND (u.full_name LIKE %s OR u.username LIKE %s OR u.email LIKE %s OR u.phone LIKE %s)'
         params.extend([f'%{search_q}%', f'%{search_q}%', f'%{search_q}%', f'%{search_q}%'])
 
-    query += ' ORDER BY FIELD(u.role, "system_admin", "region_admin", "doctor", "nurse", "pharmacist", "lab_technician", "ambulance_op", "receptionist", "care_taker", "patient"), u.full_name ASC'
+    role_order = """
+        CASE u.role
+            WHEN 'system_admin' THEN 1
+            WHEN 'region_admin' THEN 2
+            WHEN 'doctor' THEN 3
+            WHEN 'nurse' THEN 4
+            WHEN 'pharmacist' THEN 5
+            WHEN 'lab_technician' THEN 6
+            WHEN 'ambulance_op' THEN 7
+            WHEN 'receptionist' THEN 8
+            WHEN 'care_taker' THEN 9
+            WHEN 'helper' THEN 10
+            WHEN 'therapist' THEN 11
+            ELSE 12
+        END
+    """
+    query += f' ORDER BY {role_order}, u.full_name ASC'
     users_list = query_db(query, tuple(params)) or []
 
     centers = query_db('SELECT id, name, type FROM centers ORDER BY name ASC') or []
@@ -1131,10 +1310,8 @@ def save_permission_matrix():
                 is_allowed = 1
                 
             execute_db('''
-                INSERT INTO role_permissions (role, action, is_allowed)
-                VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE is_allowed = %s
-            ''', (r_key, a_key, is_allowed, is_allowed))
+                INSERT INTO role_permissions (role, action, is_allowed) VALUES (%s, %s, %s) ON CONFLICT (role, action) DO UPDATE SET is_allowed = EXCLUDED.is_allowed
+            ''', (r_key, a_key, is_allowed))
             
     log_audit('permission_matrix_updated', 'system', 0, 'Action permission matrix updated by Master Admin')
     flash('Role Action Permission Matrix successfully updated and deployed across the platform.', 'success')

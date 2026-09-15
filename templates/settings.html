@@ -199,7 +199,7 @@
                             <label for="dob" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
                                 Date of Birth
                             </label>
-                            <input type="date" id="dob" name="dob" value="{{ patient.dob or '' }}"
+                            <input type="date" id="dob" name="dob" min="1900-01-01" value="{{ patient.dob or '' }}"
                                    style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
                         </div>
 
@@ -606,3 +606,12 @@ if (inputEl) {
 }
 </script>
 {% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dob = document.getElementById('dob');
+    if (dob) {
+        dob.max = new Date().toISOString().split('T')[0];
+    }
+});
+</script>

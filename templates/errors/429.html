@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ _('errors.429_title') }}{% endblock %}
+{% block body %}
+<div style="display:flex; align-items:center; justify-content:center; min-height:100vh; flex-direction:column; text-align:center; padding: var(--sp-8);">
+    <h1 style="font-size: 4rem; color: var(--amber); margin-bottom: var(--sp-4);">429</h1>
+    <h2 style="margin-bottom: var(--sp-4);">{{ _('errors.429_title') }}</h2>
+    <p style="color: var(--muted); margin-bottom: var(--sp-6);">{{ _('errors.429_desc') }}</p>
+    <a href="/" class="btn">{{ _('errors.return_home') }}</a>
+</div>
+{% endblock %}

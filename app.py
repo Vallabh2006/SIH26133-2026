@@ -1,7 +1,10 @@
+import flask.cli
+flask.cli.show_server_banner = lambda *args, **kwargs: None
+import time
 import os
 import json
 import re
-from flask import Flask, render_template, redirect, url_for, session, jsonify, request, flash, abort
+from flask import Flask, render_template, redirect, url_for, session, jsonify, request, flash, abort, g, send_from_directory
 from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
@@ -14,6 +17,7 @@ from utils.i18n import init_i18n
 from utils.auth_helpers import get_current_user
 from utils.defaults import get_user_center_id, get_center_or_404
 from utils.constants import DEFAULT_ALLERGIES, DEFAULT_DISTRICT, DEFAULT_DEPARTMENT, DEFAULT_WALK_IN_REASON, DEFAULT_ONLINE_REASON
+from utils.logger import setup_logging, get_logger
 
 class CustomCSRFProtect(CSRFProtect):
     def protect(self):
@@ -25,12 +29,17 @@ class CustomCSRFProtect(CSRFProtect):
 csrf = CustomCSRFProtect()
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200 per day", "60 per hour"],
-    storage_uri="memory://"
+    default_limits=["1000 per hour", "200 per minute"],
+    storage_uri=os.getenv('RATELIMIT_STORAGE_URI', 'memory://'),
+    strategy="fixed-window"
 )
 
 
 def create_app(config_name=None):
+    setup_logging()
+    logger = get_logger("app")
+    access_logger = get_logger("access")
+
     if config_name is None:
         config_name = os.getenv('FLASK_ENV', 'default')
 
@@ -44,6 +53,7 @@ def create_app(config_name=None):
     init_i18n(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    limiter.enabled = app.config.get('RATELIMIT_ENABLED', True)
     cors_origins_env = os.getenv('CORS_ALLOWED_ORIGINS')
     if cors_origins_env:
         allowed_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
@@ -98,8 +108,9 @@ def create_app(config_name=None):
 
     @app.before_request
     def check_testing_and_session():
-        if app.config.get('TESTING'):
-            app.config['WTF_CSRF_ENABLED'] = False
+        g.request_start_time = time.time()
+        if app.config.get("TESTING"):
+            app.config["WTF_CSRF_ENABLED"] = False
         validate_user_session_logic()
 
     def validate_user_session_logic():
@@ -114,15 +125,15 @@ def create_app(config_name=None):
                 pass
 
     @app.after_request
-    def set_security_headers(response):
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=(self)'
+    def handle_after_request(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
         if not app.debug:
-            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-            response.headers['Content-Security-Policy'] = (
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' https://unpkg.com; "
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
@@ -130,6 +141,20 @@ def create_app(config_name=None):
                 "img-src 'self' data: https://*.tile.openstreetmap.org; "
                 "connect-src 'self'"
             )
+
+        if request.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+        elif response.status_code == 200 and not response.headers.get("Cache-Control"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+
+        try:
+            duration_ms = (time.time() - getattr(g, "request_start_time", time.time())) * 1000
+            if not request.path.startswith("/static/"):
+                access_logger.info("%s %s -> %s (%.1fms)", request.method, request.path, response.status_code, duration_ms)
+        except Exception:
+            pass
+
         return response
 
     from blueprints.auth import auth_bp
@@ -260,6 +285,12 @@ def create_app(config_name=None):
     def records_view(username):
         username = username.strip().lstrip('@')
         user = get_current_user()
+        if not user:
+            flash('Please log in to access medical records.', 'error')
+            return redirect(url_for('auth.login'))
+        if user.get('role') == 'patient' and user.get('username') != username:
+            flash('Access denied: You are only authorized to view your own medical records.', 'error')
+            return redirect(f'/records/@{user.get("username")}')
         target_user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
         records = []
         prescriptions = []
@@ -608,35 +639,70 @@ def create_app(config_name=None):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         from utils.audit import log_audit
-        log_audit('rate_limit_exceeded', 'ip', request.remote_addr, {'description': str(e.description)})
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Rate limit exceeded', 'message': str(e.description)}), 429
-        flash('Too many requests. Please slow down and try again in a moment.', 'error')
-        return render_template('errors/403.html'), 429
+        client_ip = request.remote_addr or "-"
+        logger.warning("Rate limit triggered: ip=%s, path=%s, desc=%s", client_ip, request.path, str(e.description))
+        log_audit("rate_limit_exceeded", "ip", client_ip, {"description": str(e.description)})
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"error": "Rate limit exceeded", "message": str(e.description)}), 429
+        flash("Too many requests. Please slow down and try again in a moment.", "error")
+        return render_template("errors/429.html"), 429
 
     @app.errorhandler(404)
     def not_found(e):
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Not found'}), 404
-        return render_template('errors/404.html'), 404
+        if not request.path.startswith("/static/"):
+            logger.info("Resource not found (404): %s %s", request.method, request.path)
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"error": "Not found"}), 404
+        return render_template("errors/404.html"), 404
 
     @app.errorhandler(403)
     def forbidden(e):
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Forbidden'}), 403
-        return render_template('errors/403.html'), 403
+        logger.warning("Access forbidden (403): %s %s", request.method, request.path)
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"error": "Forbidden"}), 403
+        return render_template("errors/403.html"), 403
+
+
 
     @app.errorhandler(500)
     def server_error(e):
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Internal server error'}), 500
-        return render_template('errors/500.html'), 500
+        logger.error("HTTP 500 Server Error: %s on %s %s", str(e), request.method, request.path, exc_info=True)
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"error": "INTERNAL_SERVER_ERROR", "message": "An unexpected server error occurred. Please try again later."}), 500
+        return render_template("errors/500.html"), 500
+
+    @app.errorhandler(Exception)
+    def unhandled_exception_handler(e):
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            return e
+        logger.error("Unhandled Exception Caught: %s on %s %s", str(e), request.method, request.path, exc_info=True)
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"error": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred. Please try again later."}), 500
+        return render_template("errors/500.html"), 500
+
+
+    @app.route("/favicon.ico")
+    def favicon():
+        return send_from_directory(os.path.join(app.root_path, "static"), "anvaya.png", mimetype="image/png")
 
     return app
 
 
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
+if __name__ == "__main__":
+    import logging
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    port = int(os.getenv("PORT", 5000))
     app = create_app()
-    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 't')
-    app.run(debug=debug_mode, host='0.0.0.0', port=port)
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() in ("true", "1", "t")
+
+    mode_str = "Development" if debug_mode else "Production Ready"
+    print("\033[36m" + "=" * 68 + "\033[0m")
+    print("\033[1;32m   ANVAYA VISTARA - Rural & Regional Healthcare Platform\033[0m")
+    print("\033[36m" + "=" * 68 + "\033[0m")
+    print(f"   - Local Server : \033[1;34mhttp://127.0.0.1:{port}\033[0m")
+    print(f"   - Environment  : \033[33m{mode_str}\033[0m")
+    print("   - Database     : \033[32mPostgreSQL Active\033[0m")
+    print("\033[36m" + "=" * 68 + "\033[0m\n")
+
+    app.run(debug=debug_mode, host="0.0.0.0", port=port)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Verify Email - {{ _('app.name') }}{% endblock %}
+{% block title %}{{ _('auth.otp_verify_title') }} - {{ _('app.name') }}{% endblock %}
 
 {% block body %}
 <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); padding: var(--sp-6);">
@@ -13,17 +13,17 @@
             </svg>
         </div>
 
-        <h2 style="margin: 0 0 8px; font-size: 1.4rem; color: var(--navy); font-weight: 700;">Verify Your Email</h2>
+        <h2 style="margin: 0 0 8px; font-size: 1.4rem; color: var(--navy); font-weight: 700;">{{ _('auth.otp_verify_title') }}</h2>
         <p style="color: var(--muted); margin: 0 0 var(--sp-6); font-size: var(--fs-sm); line-height: 1.5;">
-            We have sent a 6-digit verification code to<br>
+            {{ _('auth.otp_sent_to') }}<br>
             <strong style="color: var(--navy); font-weight: 600;">{{ (email | mask_email) if email else 'your registered email' }}</strong>
         </p>
 
         <form method="POST" id="otp-form" style="display: flex; flex-direction: column; gap: var(--sp-4);">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field" style="margin: 0;">
                 <input type="text" id="otp" name="otp" maxlength="6" pattern="[0-9]{6}" required autofocus
-                       placeholder="000000"
+                       placeholder="{{ _('auth.otp_placeholder') }}"
                        style="text-align: center; font-family: var(--mono); font-size: 2rem; letter-spacing: 0.35em; font-weight: 700; height: 58px; border-radius: 10px; border: 2px solid var(--line); background: var(--white); outline: none; transition: border-color 0.2s;"
                        autocomplete="one-time-code" inputmode="numeric"
                        onfocus="this.style.borderColor='var(--blue)'"
@@ -32,19 +32,19 @@
             </div>
 
             <button type="submit" class="btn lg" style="width: 100%; font-weight: 600; background: var(--blue); color: #fff; height: 48px; border-radius: 8px; border: none; font-size: var(--fs-base); cursor: pointer;">
-                Verify & Activate Account
+                {{ _('auth.btn_verify_activate') }}
             </button>
         </form>
 
         <div style="margin-top: var(--sp-6); border-top: 1px solid var(--line); padding-top: var(--sp-4); display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-xs);">
             <form method="POST" action="{{ url_for('auth.resend_otp') }}" style="margin: 0;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" style="background: none; border: none; color: var(--blue); font-weight: 600; cursor: pointer; font-size: var(--fs-xs); padding: 0;">
-                    Resend Code
+                    {{ _('auth.resend') }}
                 </button>
             </form>
             <a href="{{ url_for('auth.login') }}" style="color: var(--muted); text-decoration: none;">
-                Back to Login
+                {{ _('auth.back_to_login') }}
             </a>
         </div>
     </div>

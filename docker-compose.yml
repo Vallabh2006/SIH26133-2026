@@ -1,0 +1,76 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker
+    container_name: anvaya_vistara_web
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - FLASK_DEBUG=${FLASK_DEBUG:-0}
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_TYPE=${DB_TYPE:-postgres}
+      - PG_HOST=${COMPOSE_PG_HOST:-db}
+      - PG_PORT=${PG_PORT:-5432}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_DB=${COMPOSE_PG_DB:-anvaya_vistara}
+      - PG_SSLMODE=${COMPOSE_PG_SSLMODE:-disable}
+      - SESSION_TYPE=${SESSION_TYPE:-redis}
+      - SESSION_REDIS=${COMPOSE_SESSION_REDIS:-redis://redis:6379/0}
+      - RATELIMIT_ENABLED=${RATELIMIT_ENABLED:-false}
+      - BLOCK_VPN=${BLOCK_VPN:-false}
+      - OTP_VALIDITY_SECONDS=${OTP_VALIDITY_SECONDS:-600}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.flask_sessions
+
+  redis:
+    image: redis:alpine
+    container_name: anvaya_vistara_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:15-alpine
+    container_name: anvaya_vistara_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgres}
+      - POSTGRES_DB=${COMPOSE_PG_DB:-anvaya_vistara}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres_sample.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d anvaya_vistara" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:

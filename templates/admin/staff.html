@@ -307,28 +307,11 @@
 
 <script>
 function openStaffModal() {
-    const modal = document.getElementById('staff-modal');
-    if (modal) {
-        modal.classList.add('open');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
+    openModal('staff-modal');
 }
 
 function closeStaffModal() {
-    const modal = document.getElementById('staff-modal');
-    if (modal) {
-        modal.classList.remove('open');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
+    closeModal('staff-modal');
 }
-
-window.addEventListener('click', function(e) {
-    const modal = document.getElementById('staff-modal');
-    if (e.target === modal) {
-        closeStaffModal();
-    }
-});
 </script>
 {% endblock %}

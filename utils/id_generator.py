@@ -32,6 +32,8 @@ def generate_staff_id(role):
         'ambulance_op': 'AMB',
         'receptionist': 'REC',
         'care_taker': 'ASH',
+        'helper': 'HLP',
+        'therapist': 'THR',
         'region_admin': 'RAD',
         'system_admin': 'ADM'
     }
@@ -57,7 +59,7 @@ def generate_staff_id(role):
 
 
 def generate_facility_id(name_or_region):
-    words = [w for w in re.split(r'[\s\-_(),]+', name_or_region or '') if w.upper() not in ('PRIMARY', 'HEALTH', 'CENTRE', 'CENTER', 'COMMUNITY', 'HOSPITAL', 'DISPENSARY', 'SUBCENTRE', 'PHC', 'CHC', 'DH', 'UPHC', 'THE', 'AND')]
+    words = [w for w in re.split(r'[\s\-_(),]+', name_or_region or '') if w.upper() not in ('PRIMARY', 'HEALTH', 'CENTRE', 'CENTER', 'COMMUNITY', 'HOSPITAL', 'DISPENSARY', 'SUBCENTRE', 'PHC', 'DH', 'UPHC', 'THE', 'AND')]
     if words:
         keyword = words[0].upper()
     else:

@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, session
 from utils.auth_helpers import get_current_user
 from utils.db import query_db, execute_db
+from app import limiter
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -16,9 +17,12 @@ def health_check():
         db_ok = False
     return jsonify({
         'ok': True,
-        'status': 'healthy' if db_ok else 'degraded',
-        'database': 'connected' if db_ok else 'disconnected',
-        'timestamp': datetime.now().isoformat()
+        'data': {
+            'status': 'healthy' if db_ok else 'degraded',
+            'database': 'connected' if db_ok else 'disconnected',
+            'timestamp': datetime.now().isoformat()
+        },
+        'message': 'Health check completed'
     })
 
 
@@ -27,16 +31,20 @@ def server_world_time():
     now = datetime.now()
     return jsonify({
         'ok': True,
-        'epoch_ms': int(time.time() * 1000),
-        'iso': now.isoformat(),
-        'timezone': 'Asia/Kolkata (IST)',
-        'formatted': now.strftime('%b %d, %Y - %I:%M:%S %p'),
-        'date': now.strftime('%Y-%m-%d'),
-        'time': now.strftime('%H:%M')
+        'data': {
+            'epoch_ms': int(time.time() * 1000),
+            'iso': now.isoformat(),
+            'timezone': 'Asia/Kolkata (IST)',
+            'formatted': now.strftime('%b %d, %Y - %I:%M:%S %p'),
+            'date': now.strftime('%Y-%m-%d'),
+            'time': now.strftime('%H:%M')
+        },
+        'message': 'Current server time'
     })
 
 
 @api_bp.route('/notifications')
+@limiter.limit('300 per hour')
 def get_notifications():
     user = get_current_user()
     if not user:
@@ -65,6 +73,19 @@ def get_notifications():
 
     return jsonify({
         'ok': True,
+        'data': {
+            'count': count,
+            'notifications': [
+                {
+                    'id': n['id'],
+                    'title': n['title'],
+                    'body': n.get('body', ''),
+                    'link': n.get('link', ''),
+                    'is_read': bool(n.get('is_read')),
+                    'created_at': n['created_at'].isoformat() if hasattr(n['created_at'], 'isoformat') else str(n['created_at'])
+                } for n in notifs
+            ]
+        },
         'count': count,
         'notifications': [
             {
@@ -93,7 +114,7 @@ def mark_notifications_read():
     else:
         execute_db('UPDATE notifications SET is_read = 1 WHERE user_id = %s', (user['id'],))
 
-    return jsonify({'ok': True, 'message': 'Notifications marked as read'})
+    return jsonify({'ok': True, 'data': {'notification_id': notification_id}, 'message': 'Notifications marked as read'})
 
 
 @api_bp.route('/auth/set-lang', methods=['POST'])
@@ -109,6 +130,6 @@ def set_lang():
         except Exception:
             pass
 
-    resp = jsonify({'ok': True, 'lang': lang})
+    resp = jsonify({'ok': True, 'data': {'lang': lang}, 'lang': lang, 'message': 'Language updated'})
     resp.set_cookie('lang', lang, max_age=365*24*3600)
     return resp

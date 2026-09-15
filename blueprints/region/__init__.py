@@ -14,7 +14,7 @@ def dashboard():
     total_patients_row = query_db('SELECT COUNT(*) as c FROM patients', one=True)
     total_patients = total_patients_row['c'] if total_patients_row else 0
     
-    total_staff_row = query_db('SELECT COUNT(*) as c FROM users WHERE role NOT IN ("patient", "system_admin")', one=True)
+    total_staff_row = query_db("SELECT COUNT(*) as c FROM users WHERE role NOT IN ('patient', 'system_admin')", one=True)
     total_staff = total_staff_row['c'] if total_staff_row else 0
     
     active_refs = query_db("SELECT COUNT(*) as c FROM referrals WHERE status IN ('initiated', 'accepted', 'in_transit')", one=True)

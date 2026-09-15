@@ -1,10 +1,13 @@
+import json
 from flask import session, request
 from utils.db import execute_db, query_db
-import json
+from utils.logger import get_logger
+
+logger = get_logger('audit')
 
 
 def log_audit(action, entity_type=None, entity_id=None, detail=None):
-    user_id = session.get('user_id')
+    user_id = session.get('user_id') if session else None
     ip = request.remote_addr if request else None
     detail_json = json.dumps(detail) if detail else None
 
@@ -21,5 +24,6 @@ def log_audit(action, entity_type=None, entity_id=None, detail=None):
             'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, detail, ip_address) VALUES (%s, %s, %s, %s, %s, %s)',
             (user_id, action, entity_type, str(entity_id) if entity_id else None, detail_json, ip)
         )
-    except Exception:
-        pass
+        logger.debug('Audit log recorded: action=%s, entity_type=%s, entity_id=%s', action, entity_type, entity_id)
+    except Exception as e:
+        logger.error('Failed to record audit log: %s | Action: %s', e, action)

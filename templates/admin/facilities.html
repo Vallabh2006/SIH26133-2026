@@ -1,5 +1,5 @@
 {% extends "shell.html" %}
-{% block page_title %}Facility Network - Admin{% endblock %}
+{% block page_title %}Facility Network - Master Admin{% endblock %}
 {% block sidebar_nav %}{% include "admin/_nav.html" %}{% endblock %}
 
 {% block content %}
@@ -7,58 +7,80 @@
     <div>
         <h1 style="margin: 0 0 4px; font-size: var(--fs-xl); color: var(--navy); font-weight: 700;">Healthcare Facilities Network</h1>
         <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">
-            Central directory of Primary Health Centres, Community Hospitals, Dispensaries, and assigned facility administrators
+            Central directory of Primary Health Centres, Community Hospitals, Dispensaries, and facility staff administration
         </p>
     </div>
     <div style="display: flex; gap: var(--sp-2);">
-        <a href="/map" class="btn outline" style="height: 40px; padding: 0 16px;">Open Network Map</a>
+        <a href="/map" class="btn outline" style="height: 40px; padding: 0 16px; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                <line x1="8" y1="2" x2="8" y2="18" />
+                <line x1="16" y1="6" x2="16" y2="22" />
+            </svg>
+            Open Network Map
+        </a>
         {% if current_user and current_user.role == 'system_admin' %}
-            <button type="button" onclick="openCreateFacilityModal()" class="btn" style="background: var(--blue); color: #fff; font-weight: 600; height: 40px; padding: 0 16px; border-radius: var(--radius);">
-                + Create New Health Center
-            </button>
+        <button type="button" onclick="openCreateFacilityModal()" class="btn btn-primary" style="height: 40px; padding: 0 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Create New Health Center
+        </button>
         {% endif %}
     </div>
 </div>
 
-<div class="cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
-    <div class="card" style="border-left: 4px solid #0369a1;">
+<div class="cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+    <div class="card" style="border-left: 4px solid var(--primary); background: var(--white); padding: var(--sp-4); border-radius: var(--radius); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);">
         <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Primary Health (PHC)</div>
-        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #0369a1;">{{ type_stats.get('PHC', 0) }}</div>
-        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Grassroots frontline clinics</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: var(--primary);">{{ type_stats.get('PHC', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Frontline primary health centres</div>
     </div>
 
-    <div class="card" style="border-left: 4px solid #16a34a;">
-        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Community Health (CHC)</div>
-        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #16a34a;">{{ type_stats.get('CHC', 0) }}</div>
-        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Secondary referral hospitals</div>
+    <div class="card" style="border-left: 4px solid var(--red); background: var(--white); padding: var(--sp-4); border-radius: var(--radius); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Hospitals (DH / SDH)</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: var(--red);">{{ type_stats.get('DH', 0) + type_stats.get('SDH', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Secondary & Sub-district referral centers</div>
     </div>
 
-    <div class="card" style="border-left: 4px solid #dc2626;">
-        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">District Hospitals (DH)</div>
-        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #dc2626;">{{ type_stats.get('DH', 0) }}</div>
-        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Tertiary trauma & specialty</div>
-    </div>
-
-    <div class="card" style="border-left: 4px solid #d97706;">
+    <div class="card" style="border-left: 4px solid var(--amber); background: var(--white); padding: var(--sp-4); border-radius: var(--radius); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);">
         <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Dispensaries & SubCentres</div>
-        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #d97706;">{{ type_stats.get('SubCentre', 0) + type_stats.get('Dispensary', 0) }}</div>
-        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Municipal community outposts</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: var(--amber);">{{ type_stats.get('SubCentre', 0) + type_stats.get('Dispensary', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Rural sub-centres and outposts</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--teal); background: var(--white); padding: var(--sp-4); border-radius: var(--radius); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Network Status</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: var(--teal);">{{ active_count or 0 }} <span style="font-size: var(--fs-sm); font-weight: 500; color: var(--muted);">/ {{ total_count or 0 }} Active</span></div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">{{ inactive_count or 0 }} deactivated / offline</div>
     </div>
 </div>
 
-<div class="panel" style="margin-bottom: var(--sp-6);">
+<div class="panel" style="margin-bottom: var(--sp-6); background: var(--white); padding: var(--sp-4); border-radius: var(--radius); border: 1px solid var(--line);">
     <form method="GET" action="/admin/facilities" style="display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
-        <div style="min-width: 180px;">
+        <div style="min-width: 170px;">
             <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
                 Classification Type
             </label>
-            <select name="type" style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+            <select name="type" style="width: 100%; height: 38px; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
                 <option value="all" {% if not fac_type or fac_type == 'all' %}selected{% endif %}>All Facility Types</option>
                 <option value="PHC" {% if fac_type == 'PHC' %}selected{% endif %}>PHC (Primary Care)</option>
-                <option value="CHC" {% if fac_type == 'CHC' %}selected{% endif %}>CHC (Community Health)</option>
                 <option value="DH" {% if fac_type == 'DH' %}selected{% endif %}>DH (District Hospital)</option>
+                <option value="SDH" {% if fac_type == 'SDH' %}selected{% endif %}>SDH (Sub-District Hospital)</option>
                 <option value="Dispensary" {% if fac_type == 'Dispensary' %}selected{% endif %}>Dispensary</option>
                 <option value="SubCentre" {% if fac_type == 'SubCentre' %}selected{% endif %}>SubCentre</option>
+            </select>
+        </div>
+
+        <div style="min-width: 140px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                Status
+            </label>
+            <select name="status" style="width: 100%; height: 38px; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+                <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
             </select>
         </div>
 
@@ -66,22 +88,24 @@
             <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
                 Search Center
             </label>
-            <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, ID, region, address..." style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+            <input type="text" name="q" value="{{ search_q }}" placeholder="Search by facility name, ID, district, address..." style="width: 100%; height: 38px; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
         </div>
 
-        <div>
-            <button type="submit" class="btn sm" style="height: 38px;">Apply Filter</button>
-            <a href="/admin/facilities" class="btn sm outline" style="height: 38px;">Reset</a>
+        <div style="display: flex; gap: var(--sp-2);">
+            <button type="submit" class="btn btn-primary" style="height: 38px; padding: 0 16px;">Apply Filter</button>
+            <a href="/admin/facilities" class="btn outline" style="height: 38px; padding: 0 14px;">Reset</a>
         </div>
     </form>
 </div>
 
-<div class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
-        <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);">
-            Registered Health Facilities Network ({{ facilities|length }})
-        </h3>
-        <span style="font-size: var(--fs-xs); color: var(--muted);">Managed under regional health cluster</span>
+<div class="panel" style="background: var(--white); border-radius: var(--radius); border: 1px solid var(--line); overflow: hidden;">
+    <div style="padding: var(--sp-4) var(--sp-5); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); background: var(--bg);">
+        <div>
+            <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md); font-weight: 700;">
+                Registered Health Facilities Network ({{ facilities|length }})
+            </h3>
+            <span style="font-size: var(--fs-xs); color: var(--muted);">Click on any facility to edit info, manage resources, and reset staff credentials</span>
+        </div>
     </div>
 
     {% if facilities %}
@@ -89,60 +113,276 @@
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background: var(--bg);">
-                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Facility Name & ID</th>
-                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Classification</th>
-                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">District / Location</th>
-                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Assigned Admin</th>
-                    <th style="text-align: center; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Staff</th>
-                    <th style="text-align: center; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Patients</th>
-                    <th style="text-align: right; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Actions</th>
+                    <th style="text-align: left; padding: var(--sp-3) var(--sp-4); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Facility Name & ID</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Type</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">District / Location</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Facility Admin</th>
+                    <th style="text-align: center; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Key Resources</th>
+                    <th style="text-align: center; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Staff</th>
+                    <th style="text-align: center; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Patients</th>
+                    <th style="text-align: right; padding: var(--sp-3) var(--sp-4); border-bottom: 2px solid var(--line); font-size: var(--fs-xs); color: var(--navy);">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for fac in facilities %}
-                <tr>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line);">
-                        <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ fac.name }}</strong><br>
-                        <span style="font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono); background: var(--sky); padding: 1px 6px; border-radius: 4px;">{{ fac.id }}</span>
+                <tr id="row-{{ fac.id }}" style="border-bottom: 1px solid var(--line); transition: background 0.15s ease;">
+                    <td style="padding: var(--sp-3) var(--sp-4);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" onclick="toggleFacilityPanel('{{ fac.id }}')" style="background: none; border: 1px solid var(--line); border-radius: 4px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy);" title="Toggle edit panel">
+                                <span id="icon-{{ fac.id }}" style="font-size: 11px; font-weight: bold;">▶</span>
+                            </button>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <strong style="color: var(--navy); font-size: var(--fs-sm); cursor: pointer;" onclick="toggleFacilityPanel('{{ fac.id }}')">{{ fac.name }}</strong>
+                                    {% if fac.is_active %}
+                                    <span style="background: #dcfce7; color: #166534; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;">ACTIVE</span>
+                                    {% else %}
+                                    <span style="background: #fee2e2; color: #991b1b; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;">INACTIVE</span>
+                                    {% endif %}
+                                </div>
+                                <span style="font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono); background: var(--sky); padding: 1px 6px; border-radius: 4px;">{{ fac.id }}</span>
+                            </div>
+                        </div>
                     </td>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line);">
+                    <td style="padding: var(--sp-3); font-size: var(--fs-xs);">
                         {% if fac.type == 'PHC' %}
-                            <span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">PHC</span>
-                        {% elif fac.type == 'CHC' %}
-                            <span style="background: #f0fdf4; color: #166534; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">CHC</span>
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">PHC</span>
                         {% elif fac.type == 'DH' %}
-                            <span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">DISTRICT HOSPITAL</span>
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">DH HOSPITAL</span>
+                        {% elif fac.type == 'SDH' %}
+                        <span style="background: #ede9fe; color: #6d28d9; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">SDH HOSPITAL</span>
                         {% elif fac.type == 'Dispensary' %}
-                            <span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">DISPENSARY</span>
+                        <span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">DISPENSARY</span>
                         {% else %}
-                            <span style="background: #ede9fe; color: #6d28d9; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">SUBCENTRE</span>
+                        <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">SUBCENTRE</span>
                         {% endif %}
                     </td>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs);">
+                    <td style="padding: var(--sp-3); font-size: var(--fs-xs);">
                         <strong style="color: var(--navy);">{{ fac.region or 'Anand' }}, {{ fac.state or 'Gujarat' }}</strong><br>
-                        <span style="color: var(--muted);">{{ fac.address }}</span>
+                        <span style="color: var(--muted); font-size: 11px;">{{ fac.address }}</span>
                     </td>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs);">
+                    <td style="padding: var(--sp-3); font-size: var(--fs-xs);">
                         {% if fac.admin_username %}
-                            <strong style="color: var(--navy);">{{ fac.admin_fullname or 'Center Admin' }}</strong><br>
-                            <span style="font-family: var(--mono); color: var(--blue);">@{{ fac.admin_username }}</span>
+                        <strong style="color: var(--navy);">{{ fac.admin_fullname or 'Center Admin' }}</strong><br>
+                        <span style="font-family: var(--mono); color: var(--blue);">@{{ fac.admin_username }}</span>
                         {% else %}
-                            <span style="color: var(--red); font-weight: 600;">Unassigned</span>
+                        <span style="color: var(--red); font-weight: 600;">Unassigned</span>
                         {% endif %}
                     </td>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); text-align: center; font-weight: 700; color: var(--navy);">
-                        {{ fac.staff_count }}
+                    <td style="padding: var(--sp-3); text-align: center; font-size: 11px;">
+                        <span style="color: var(--navy); font-weight: 600;">{{ fac.resources_parsed.get('beds', 0) }} beds</span> &bull;
+                        <span style="color: var(--navy); font-weight: 600;">{{ fac.resources_parsed.get('oxygen', 0) }} O₂</span> &bull;
+                        <span style="color: var(--navy); font-weight: 600;">{{ fac.resources_parsed.get('ambulance', 0) }} amb</span>
                     </td>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); text-align: center; font-weight: 700; color: var(--blue);">
-                        {{ fac.patient_count }}
+                    <td style="padding: var(--sp-3); text-align: center; font-weight: 700; color: var(--navy);">
+                        <span style="background: var(--bg); padding: 2px 8px; border-radius: 12px; font-size: var(--fs-xs);">{{ fac.staff_count }}</span>
                     </td>
-                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); text-align: right;">
-                        <a href="/map?facility={{ fac.id }}" class="btn sm outline" style="font-size: 11px; padding: 3px 8px;">
-                            Locate
-                        </a>
-                        <a href="/admin/inventory?center_id={{ fac.id }}" class="btn sm outline" style="font-size: 11px; padding: 3px 8px;">
-                            Stock
-                        </a>
+                    <td style="padding: var(--sp-3); text-align: center; font-weight: 700; color: var(--primary);">
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-size: var(--fs-xs);">{{ fac.patient_count }}</span>
+                    </td>
+                    <td style="padding: var(--sp-3) var(--sp-4); text-align: right;">
+                        <div style="display: inline-flex; gap: 4px;">
+                            <button type="button" onclick="toggleFacilityPanel('{{ fac.id }}')" class="btn sm" style="font-size: 11px; padding: 4px 8px; background: var(--bg); color: var(--navy); border: 1px solid var(--line);">
+                                Manage ▾
+                            </button>
+                            <a href="/admin/inventory?center_id={{ fac.id }}" class="btn sm outline" style="font-size: 11px; padding: 4px 8px;" title="View stock">
+                                Stock
+                            </a>
+                            <a href="/map?facility={{ fac.id }}" class="btn sm outline" style="font-size: 11px; padding: 4px 8px;" title="Locate center">
+                                Map
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr id="panel-{{ fac.id }}" style="display: none; background: #f8fafc;">
+                    <td colspan="8" style="padding: var(--sp-4) var(--sp-5); border-bottom: 2px solid var(--line);">
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--sp-5);">
+
+                            <div style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-2);">
+                                    <h4 style="margin: 0; color: var(--navy); font-size: var(--fs-sm); font-weight: 700;">
+                                        Edit Facility Details & Resources - {{ fac.id }}
+                                    </h4>
+                                    <div style="display: flex; gap: 6px;">
+                                        <form method="POST" action="/admin/facilities/toggle-status/{{ fac.id }}" style="margin: 0;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            {% if fac.is_active %}
+                                            <button type="submit" class="btn sm" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 11px; padding: 3px 8px;" onclick="return confirm('Are you sure you want to deactivate {{ fac.name }}?');">
+                                                Deactivate Center
+                                            </button>
+                                            {% else %}
+                                            <button type="submit" class="btn sm" style="background: #dcfce7; color: #166534; border: 1px solid #86efac; font-size: 11px; padding: 3px 8px;">
+                                                Re-Activate Center
+                                            </button>
+                                            {% endif %}
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <form method="POST" action="/admin/facilities/update/{{ fac.id }}" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--sp-3);">
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Facility Name <span style="color: var(--red);">*</span></label>
+                                            <input type="text" name="name" value="{{ fac.name }}" required style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                        </div>
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Classification <span style="color: var(--red);">*</span></label>
+                                            <select name="type" required style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                                <option value="PHC" {% if fac.type == 'PHC' %}selected{% endif %}>PHC (Primary Care)</option>
+                                                <option value="DH" {% if fac.type == 'DH' %}selected{% endif %}>DH (District Hospital)</option>
+                                                <option value="SDH" {% if fac.type == 'SDH' %}selected{% endif %}>SDH (Sub-District Hospital)</option>
+                                                <option value="Dispensary" {% if fac.type == 'Dispensary' %}selected{% endif %}>Dispensary</option>
+                                                <option value="SubCentre" {% if fac.type == 'SubCentre' %}selected{% endif %}>SubCentre</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);">
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Region / District</label>
+                                            <input type="text" name="region" value="{{ fac.region or 'Anand' }}" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                        </div>
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">State</label>
+                                            <input type="text" name="state" value="{{ fac.state or 'Gujarat' }}" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                        </div>
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Phone</label>
+                                            <input type="text" name="phone" value="{{ fac.phone or '' }}" placeholder="+91 ..." style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                        </div>
+                                    </div>
+
+                                    <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                        <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Physical Address <span style="color: var(--red);">*</span></label>
+                                        <textarea name="address" required rows="2" style="width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs); resize: vertical;">{{ fac.address }}</textarea>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Latitude</label>
+                                            <input type="text" name="lat" value="{{ fac.lat }}" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs); font-family: var(--mono);">
+                                        </div>
+                                        <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                            <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Longitude</label>
+                                            <input type="text" name="lng" value="{{ fac.lng }}" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs); font-family: var(--mono);">
+                                        </div>
+                                    </div>
+
+                                    <div style="background: var(--bg); padding: var(--sp-3); border-radius: var(--radius); border: 1px solid var(--line);">
+                                        <div style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px;">Facility Capacities & Emergency Features</div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-2); margin-bottom: var(--sp-2);">
+                                            <div>
+                                                <label style="font-size: 10px; color: var(--muted); font-weight: 600; display: block;">Total Beds</label>
+                                                <input type="number" name="beds" value="{{ fac.resources_parsed.get('beds', 0) }}" min="0" style="width: 100%; height: 30px; padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 10px; color: var(--muted); font-weight: 600; display: block;">Oxygen Points</label>
+                                                <input type="number" name="oxygen" value="{{ fac.resources_parsed.get('oxygen', 0) }}" min="0" style="width: 100%; height: 30px; padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 10px; color: var(--muted); font-weight: 600; display: block;">Ambulances</label>
+                                                <input type="number" name="ambulance" value="{{ fac.resources_parsed.get('ambulance', 0) }}" min="0" style="width: 100%; height: 30px; padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                            </div>
+                                        </div>
+
+                                        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--sp-2); align-items: center;">
+                                            <div>
+                                                <label style="font-size: 10px; color: var(--muted); font-weight: 600; display: block;">Operating Timings</label>
+                                                <input type="text" name="timings" value="{{ fac.resources_parsed.get('timings', '24x7 Emergency / OPD 9AM - 5PM') }}" style="width: 100%; height: 30px; padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 11px;">
+                                            </div>
+                                            <div style="padding-top: 14px;">
+                                                <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--navy); font-weight: 600;">
+                                                    <input type="checkbox" name="emergency_24x7" {% if fac.resources_parsed.get('emergency_24x7') %}checked{% endif %}>
+                                                    24x7 Emergency
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% if current_user.role == 'system_admin' %}
+                                    <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
+                                        <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Designated Facility Administrator</label>
+                                        <select name="assigned_admin_id" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
+                                            <option value="">-- Keep Current Administrator ({{ fac.admin_fullname or 'None' }}) --</option>
+                                            <option value="unassign">Unassign / Vacant Administrator</option>
+                                            {% for adm in available_admins %}
+                                            <option value="{{ adm.id }}" {% if adm.id == fac.admin_id %}selected{% endif %}>
+                                                {{ adm.full_name }} (@{{ adm.username }}) - {{ adm.center_id or 'Unassigned' }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% endif %}
+
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--sp-2);">
+                                        <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--navy); font-weight: 600; cursor: pointer;">
+                                            <input type="checkbox" name="is_active" value="1" {% if fac.is_active %}checked{% endif %}>
+                                            Facility is Active in Network
+                                        </label>
+                                        <button type="submit" class="btn btn-primary sm" style="padding: 6px 14px; font-weight: 600;">
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-2);">
+                                    <h4 style="margin: 0; color: var(--navy); font-size: var(--fs-sm); font-weight: 700;">
+                                        Facility Staff & Access Management ({{ fac.staff_list|length }})
+                                    </h4>
+                                    <a href="/admin/staff" class="btn sm outline" style="font-size: 11px; padding: 2px 8px;">
+                                        + Invite Staff
+                                    </a>
+                                </div>
+
+                                {% if fac.staff_list %}
+                                <div style="overflow-y: auto; max-height: 440px; border: 1px solid var(--line); border-radius: var(--radius);">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                        <thead>
+                                            <tr style="background: var(--bg);">
+                                                <th style="text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);">Staff Member</th>
+                                                <th style="text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);">Role</th>
+                                                <th style="text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line);">Reset Access</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for st in fac.staff_list %}
+                                            <tr style="border-bottom: 1px solid var(--line);">
+                                                <td style="padding: 6px 8px;">
+                                                    <strong style="color: var(--navy);">{{ st.full_name }}</strong><br>
+                                                    <span style="color: var(--muted); font-family: var(--mono);">@{{ st.username }}</span>
+                                                    {% if not st.is_active %}
+                                                    <span style="color: var(--red); font-weight: bold; margin-left: 4px;">(Suspended)</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td style="padding: 6px 8px;">
+                                                    <span style="background: var(--bg); padding: 2px 6px; border-radius: 4px; font-weight: 600; color: var(--navy);">
+                                                        {{ st.role | replace('_', ' ') | title }}
+                                                    </span>
+                                                </td>
+                                                <td style="padding: 6px 8px; text-align: right;">
+                                                    <button type="button" onclick="openStaffResetModal({{ st.id }}, '{{ st.username }}', '{{ st.full_name }}')" class="btn sm outline" style="font-size: 10px; padding: 2px 6px;">
+                                                        Reset Password
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div style="padding: var(--sp-6) var(--sp-4); text-align: center; background: var(--bg); border-radius: var(--radius); flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                    <p style="margin: 0 0 var(--sp-2); font-size: var(--fs-xs); color: var(--muted);">No clinical or support staff are assigned to this facility yet.</p>
+                                    <a href="/admin/staff" class="btn sm outline" style="font-size: 11px;">Assign or Provision Staff</a>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -150,27 +390,56 @@
         </table>
     </div>
     {% else %}
-        <div class="empty-state" style="padding: var(--sp-6) 0; text-align: center;">
-            <h3>No Facilities Found</h3>
-            <p style="font-size: var(--fs-xs); color: var(--muted);">No healthcare facilities match the filter criteria.</p>
-        </div>
+    <div class="empty-state" style="padding: var(--sp-6) 0; text-align: center;">
+        <h3>No Facilities Found</h3>
+        <p style="font-size: var(--fs-xs); color: var(--muted);">No healthcare facilities match the filter criteria.</p>
+    </div>
     {% endif %}
 </div>
 
+<div id="reset-staff-modal" class="modal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-dialog" style="background: var(--white); border-radius: var(--radius-xl); max-width: 440px; width: 100%; box-shadow: var(--shadow-xl); border: 1px solid var(--line); overflow: hidden;">
+        <div style="padding: var(--sp-4) var(--sp-5); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md); font-weight: 700;">Reset Staff Password</h3>
+                <p id="reset-modal-subtitle" style="margin: 0; font-size: 11px; color: var(--muted);">Account: @staff</p>
+            </div>
+            <button type="button" onclick="closeStaffResetModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--muted);">&times;</button>
+        </div>
+
+        <form id="reset-staff-form" method="POST" action="" style="padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-4);">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">New Password</label>
+                <input type="text" name="new_password" placeholder="Leave blank to auto-generate a secure random password" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); font-family: monospace;">
+                <span style="font-size: 11px; color: var(--muted);">If blank, a temporary 12-character secure password will be generated and shown upon saving.</span>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-2);">
+                <button type="button" onclick="closeStaffResetModal()" class="btn outline" style="height: 38px;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="height: 38px; font-weight: 600;">
+                    Reset Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% if current_user and current_user.role == 'system_admin' %}
-<div id="create-facility-modal" class="modal">
-    <div class="modal-dialog" style="background: var(--white); border-radius: var(--radius-xl); max-width: 620px; width: 100%; box-shadow: var(--shadow-xl); border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column;">
+<div id="create-facility-modal" class="modal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-dialog" style="background: var(--white); border-radius: var(--radius-xl); max-width: 660px; width: 100%; box-shadow: var(--shadow-xl); border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column;">
         <div style="padding: var(--sp-4) var(--sp-6); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md); font-weight: 700;">Provision New Health Center</h3>
-                <p style="margin: 0; font-size: 11px; color: var(--muted);">Master Administrator Exclusive Action</p>
+                <p style="margin: 0; font-size: 11px; color: var(--muted);">Master Administrator Exclusive Action &bull; Press Enter to Submit</p>
             </div>
             <button type="button" onclick="closeCreateFacilityModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--muted);">&times;</button>
         </div>
-        
-        <form method="POST" action="/admin/facilities/create" style="background: var(--white); padding: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); max-height: 80vh; overflow-y: auto;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
+        <form id="create-facility-form" method="POST" action="/admin/facilities/create" style="background: var(--white); padding: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); max-height: 80vh; overflow-y: auto;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--sp-3);">
                 <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Facility Name <span style="color: var(--red);">*</span></label>
@@ -181,45 +450,42 @@
                     <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Classification <span style="color: var(--red);">*</span></label>
                     <select name="type" required style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
                         <option value="PHC">PHC (Primary Care)</option>
-                        <option value="CHC">CHC (Community Health)</option>
                         <option value="DH">DH (District Hospital)</option>
+                        <option value="SDH">SDH (Sub-District Hospital)</option>
                         <option value="Dispensary">Dispensary</option>
                         <option value="SubCentre">SubCentre</option>
                     </select>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);">
                 <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Region / Area <span style="color: var(--red);">*</span></label>
-                    <input type="text" name="region" required placeholder="e.g. Mogar / Anand Rural" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+                    <input type="text" name="region" value="Anand" required style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
                 </div>
-
                 <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">State</label>
-                    <input type="text" name="state" value="Gujarat" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">State <span style="color: var(--red);">*</span></label>
+                    <input type="text" name="state" value="Gujarat" required style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+                </div>
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Official Contact Phone</label>
+                    <input type="text" name="phone" placeholder="+91 2692 ..." style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
                 </div>
             </div>
 
             <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Physical Address <span style="color: var(--red);">*</span></label>
-                <input type="text" name="address" required placeholder="Full physical street address / landmark" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+                <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Physical Address & Landmark <span style="color: var(--red);">*</span></label>
+                <textarea name="address" required placeholder="Full physical street address..." rows="2" style="width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); resize: vertical;"></textarea>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
                 <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Latitude <span style="color: var(--red);">*</span></label>
-                    <input type="text" name="lat" required placeholder="22.5530" value="22.5530" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">GPS Latitude</label>
+                    <input type="text" name="lat" value="22.5530000" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); font-family: monospace;">
                 </div>
-
                 <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Longitude <span style="color: var(--red);">*</span></label>
-                    <input type="text" name="lng" required placeholder="72.9300" value="72.9300" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
-                </div>
-
-                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Helpline Phone</label>
-                    <input type="tel" name="phone" placeholder="+91 2692 XXXXXX" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">GPS Longitude</label>
+                    <input type="text" name="lng" value="72.9300000" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); font-family: monospace;">
                 </div>
             </div>
 
@@ -238,12 +504,12 @@
                 </div>
             </div>
 
-                        <div style="background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4);">
+            <div style="background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4);">
                 <div style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm); margin-bottom: 4px;">
                     Mandatory Facility Administrator Assignment
                 </div>
                 <p style="font-size: 11px; color: var(--muted); margin: 0 0 var(--sp-3);">
-                    Each center must have 1 designated regular administrator to manage clinical queues and operations.
+                    Each center must have a designated administrator to manage facility operations.
                 </p>
 
                 <div style="display: flex; gap: var(--sp-4); margin-bottom: var(--sp-3); font-size: var(--fs-xs);">
@@ -276,7 +542,7 @@
                         </div>
                         <div class="field" style="display: flex; flex-direction: column; gap: 2px;">
                             <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Admin Password</label>
-                            <input type="text" name="admin_password" value="adminpassword" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs); font-family: monospace;">
+                            <input type="text" name="admin_password" placeholder="Leave blank to auto-generate secure password" style="width: 100%; height: 34px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs); font-family: monospace;">
                         </div>
                     </div>
                 </div>
@@ -286,9 +552,9 @@
                         <label style="font-size: 11px; font-weight: 600; color: var(--navy);">Select Active Administrator</label>
                         <select name="assigned_admin_id" style="width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs);">
                             {% for adm in available_admins %}
-                                <option value="{{ adm.id }}">
-                                    {{ adm.full_name }} (@{{ adm.username }}) - Currently: {{ adm.center_id or 'Unassigned' }}
-                                </option>
+                            <option value="{{ adm.id }}">
+                                {{ adm.full_name }} (@{{ adm.username }}) - Currently: {{ adm.center_id or 'Unassigned' }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -297,51 +563,104 @@
 
             <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-2);">
                 <button type="button" onclick="closeCreateFacilityModal()" class="btn outline" style="height: 38px;">Cancel</button>
-                <button type="submit" class="btn" style="background: var(--blue); color: #fff; height: 38px; font-weight: 600;">
+                <button type="submit" class="btn btn-primary" style="height: 38px; font-weight: 600;">
                     Provision Facility & Assign Admin
                 </button>
             </div>
         </form>
     </div>
 </div>
+{% endif %}
 
 <script>
-function openCreateFacilityModal() {
-    const modal = document.getElementById('create-facility-modal');
-    if (modal) {
-        modal.classList.add('open');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+    function toggleFacilityPanel(facId) {
+        const panel = document.getElementById('panel-' + facId);
+        const icon = document.getElementById('icon-' + facId);
+        if (!panel) return;
+        if (panel.style.display === 'none' || panel.style.display === '') {
+            panel.style.display = 'table-row';
+            if (icon) icon.textContent = '▼';
+        } else {
+            panel.style.display = 'none';
+            if (icon) icon.textContent = '▶';
+        }
     }
-}
 
-function closeCreateFacilityModal() {
-    const modal = document.getElementById('create-facility-modal');
-    if (modal) {
-        modal.classList.remove('open');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
+    function openCreateFacilityModal() {
+        const modal = document.getElementById('create-facility-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            const firstInput = modal.querySelector('input:not([type=hidden]), select, textarea');
+            if (firstInput) firstInput.focus();
+        }
     }
-}
 
-function toggleAdminMode(mode) {
-    const newFields = document.getElementById('new-admin-fields');
-    const existingFields = document.getElementById('existing-admin-fields');
-    if (mode === 'new') {
-        newFields.style.display = 'flex';
-        existingFields.style.display = 'none';
-    } else {
-        newFields.style.display = 'none';
-        existingFields.style.display = 'block';
+    function closeCreateFacilityModal() {
+        const modal = document.getElementById('create-facility-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
     }
-}
 
-window.addEventListener('click', function(e) {
-    const modal = document.getElementById('create-facility-modal');
-    if (e.target === modal) {
-        closeCreateFacilityModal();
+    function toggleAdminMode(mode) {
+        const newFields = document.getElementById('new-admin-fields');
+        const existingFields = document.getElementById('existing-admin-fields');
+        if (!newFields || !existingFields) return;
+        if (mode === 'new') {
+            newFields.style.display = 'flex';
+            existingFields.style.display = 'none';
+        } else {
+            newFields.style.display = 'none';
+            existingFields.style.display = 'block';
+        }
     }
-});
+
+    function openStaffResetModal(userId, username, fullName) {
+        const modal = document.getElementById('reset-staff-modal');
+        const form = document.getElementById('reset-staff-form');
+        const subtitle = document.getElementById('reset-modal-subtitle');
+        if (modal && form) {
+            form.action = '/admin/facilities/reset-staff-password/' + userId;
+            if (subtitle) {
+                subtitle.textContent = 'User: ' + fullName + ' (@' + username + ')';
+            }
+            modal.style.display = 'flex';
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            const firstInput = modal.querySelector('input:not([type=hidden])');
+            if (firstInput) firstInput.focus();
+        }
+    }
+
+    function closeStaffResetModal() {
+        const modal = document.getElementById('reset-staff-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    window.addEventListener('click', function (e) {
+        const createModal = document.getElementById('create-facility-modal');
+        if (e.target === createModal) {
+            closeCreateFacilityModal();
+        }
+        const resetModal = document.getElementById('reset-staff-modal');
+        if (e.target === resetModal) {
+            closeStaffResetModal();
+        }
+    });
+
+    window.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeCreateFacilityModal();
+            closeStaffResetModal();
+        }
+    });
 </script>
-{% endif %}
 {% endblock %}

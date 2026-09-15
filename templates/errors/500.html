@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}500 - Server Error{% endblock %}
+{% block title %}{{ _('errors.500_title') }}{% endblock %}
 {% block body %}
 <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; flex-direction:column; text-align:center; padding: var(--sp-8);">
     <h1 style="font-size: 4rem; color: var(--red); margin-bottom: var(--sp-4);">500</h1>
-    <h2 style="margin-bottom: var(--sp-4);">Something Went Wrong</h2>
-    <p style="color: var(--muted); margin-bottom: var(--sp-6);">An unexpected error occurred. Please try again later.</p>
-    <a href="/" class="btn">Go Home</a>
+    <h2 style="margin-bottom: var(--sp-4);">{{ _('errors.500_title') }}</h2>
+    <p style="color: var(--muted); margin-bottom: var(--sp-6);">{{ _('errors.500_desc') }}</p>
+    <a href="/" class="btn">{{ _('errors.return_home') }}</a>
 </div>
 {% endblock %}

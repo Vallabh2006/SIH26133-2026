@@ -1,3 +1,4 @@
+from blueprints.auth import parse_flexible_dob
 from utils.id_generator import generate_patient_id
 from utils.notifications import create_notification, notify_patient
 import json
@@ -201,6 +202,9 @@ def my_records(username=None):
     if not username:
         username = user.get('username')
     username = username.strip().lstrip('@')
+    if user.get('role') == 'patient' and user.get('username') != username:
+        flash('Access denied: You are only authorized to view your own medical records.', 'error')
+        return redirect(url_for('patient.my_records', username=user.get('username')))
     target_user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
     patient = None
     records = []
@@ -444,7 +448,7 @@ def patient_request_teleconsult():
     reason = request.form.get('reason', 'Remote General Teleconsultation Request').strip()
     notes = request.form.get('notes', '').strip()
 
-    doctor = query_db('SELECT id FROM users WHERE role = "doctor" AND (center_id = %s OR center_id IS NULL) AND is_active = 1 LIMIT 1', (center_id,), one=True)
+    doctor = query_db("SELECT id FROM users WHERE role = 'doctor' AND (center_id = %s OR center_id IS NULL) AND is_active = 1 LIMIT 1", (center_id,), one=True)
     doctor_id = doctor['id'] if doctor else None
 
     session_id = execute_db("""
@@ -586,7 +590,7 @@ def patient_book_appointment():
 @login_required
 def add_patient():
     user = get_current_user()
-    if user.get('role') not in ('doctor', 'nurse', 'receptionist', 'care_taker', 'region_admin', 'system_admin'):
+    if user.get('role') not in ('doctor', 'nurse', 'receptionist', 'care_taker', 'helper', 'region_admin', 'system_admin'):
         flash('Unauthorized to register patients.', 'error')
         return redirect(url_for('patient.user_profile'))
         
@@ -601,9 +605,11 @@ def add_patient():
     chronic_conditions = request.form.get('chronic_conditions', '').strip()
     is_high_risk = 1 if request.form.get('is_high_risk') in ('1', 'on', 'true', True) else 0
     
-    if not full_name or not dob or not phone:
-        flash('Full name, date of birth, and phone number are required.', 'error')
+    parsed_dob = parse_flexible_dob(dob)
+    if not full_name or not parsed_dob or not phone:
+        flash('Full name, a valid date of birth (between 1900 and today), and phone number are required.', 'error')
         return redirect(url_for('patient.user_profile'))
+    dob = parsed_dob
         
     allergies_json = json.dumps([a.strip() for a in allergies.split(',') if a.strip()]) if allergies else json.dumps([DEFAULT_ALLERGIES])
     conditions_json = json.dumps([c.strip() for c in chronic_conditions.split(',') if c.strip()]) if chronic_conditions else json.dumps([])

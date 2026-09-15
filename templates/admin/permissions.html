@@ -207,8 +207,13 @@
                     </td>
                     <td style="padding: var(--sp-3); text-align: right;">
                         <div style="display: inline-flex; gap: 6px;">
-                            <button type="button" class="btn sm" style="background: var(--navy); color: #fff; font-size: 11px; padding: 4px 10px;"
-                                    onclick="openEditPermissionModal({{ u.id }}, '{{ u.username }}', '{{ u.full_name | escape }}', '{{ u.role }}', '{{ u.center_id or '' }}', '{{ u.designation or '' }}')">
+                            <button type="button" class="btn sm edit-perm-btn" style="background: var(--navy); color: #fff; font-size: 11px; padding: 4px 10px;"
+                                    data-user-id="{{ u.id }}"
+                                    data-username="{{ u.username }}"
+                                    data-fullname="{{ u.full_name | e }}"
+                                    data-role="{{ u.role }}"
+                                    data-center-id="{{ u.center_id or '' }}"
+                                    data-designation="{{ u.designation or '' }}">
                                 Change Role / Center
                             </button>
                         </div>
@@ -277,38 +282,38 @@
 
 <script>
 function openEditPermissionModal(userId, username, fullName, role, centerId, designation) {
-    const modal = document.getElementById('perm-modal');
     const form = document.getElementById('perm-edit-form');
     const subtitle = document.getElementById('modal-user-subtitle');
     const roleSelect = document.getElementById('modal-role-select');
     const centerSelect = document.getElementById('modal-center-select');
     const designationInput = document.getElementById('modal-designation-input');
 
-    form.action = '/admin/permissions/update-role/' + userId;
-    subtitle.textContent = fullName + ' (@' + username + ' - ID #' + userId + ')';
-    roleSelect.value = role;
-    centerSelect.value = centerId || '';
-    designationInput.value = designation || '';
+    if (form) form.action = '/admin/permissions/update-role/' + userId;
+    if (subtitle) subtitle.textContent = fullName + ' (@' + username + ' - ID #' + userId + ')';
+    if (roleSelect) roleSelect.value = role;
+    if (centerSelect) centerSelect.value = centerId || '';
+    if (designationInput) designationInput.value = designation || '';
 
-    modal.classList.add('open');
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    openModal('perm-modal');
 }
 
 function closeEditPermissionModal() {
-    const modal = document.getElementById('perm-modal');
-    if (modal) {
-        modal.classList.remove('open');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
+    closeModal('perm-modal');
 }
 
-window.addEventListener('click', function(e) {
-    const modal = document.getElementById('perm-modal');
-    if (e.target === modal) {
-        closeEditPermissionModal();
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.edit-perm-btn');
+        if (!btn) return;
+        openEditPermissionModal(
+            btn.getAttribute('data-user-id'),
+            btn.getAttribute('data-username'),
+            btn.getAttribute('data-fullname'),
+            btn.getAttribute('data-role'),
+            btn.getAttribute('data-center-id'),
+            btn.getAttribute('data-designation')
+        );
+    });
 });
 </script>
 {% endblock %}
