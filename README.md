@@ -25,6 +25,8 @@ Anvaya Vistara is an integrated multi-tiered healthcare management platform desi
 - **Rate Limiting & IP Security** - Per-endpoint rate limits via Flask-Limiter, IP lockout on repeated login failures, and optional VPN blocking.
 - **Internationalization (i18n)** - Hindi (`hi`) and English (`en`) language support via JSON translation files.
 - **Time Sync & Validation** - Server-side world clock endpoint (`/api/time`) for client synchronization and past-slot booking prevention.
+- **Progressive Web App (PWA)** - Installable via manifest with offline caching through a service worker.
+- **Android App** - Native WebView wrapper with JavaScript bridge for notifications and navigation.
 
 ---
 
@@ -122,15 +124,17 @@ Environment variables are loaded via `python-dotenv` from `.env`. See [`.env.exa
 
 | Variable | Purpose |
 |---|---|
-| `SECRET_KEY` | Flask session encryption key (**required**, app refuses to start without it) |
+| `SECRET_KEY` | Flask session encryption key (**required**) |
 | `DB_TYPE` | Database backend (`postgres`) |
 | `PG_HOST`, `PG_PORT`, `PG_USER`, `PG_PASSWORD`, `PG_DB` | PostgreSQL / Supabase connection |
-| `SESSION_TYPE` | Session backend (`filesystem`) |
+| `SESSION_TYPE` | Session backend (`cookie` for stateless, `filesystem`, or `redis`) |
 | `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_DEFAULT_SENDER` | Mailjet API credentials and sender address |
 | `RATELIMIT_ENABLED`, `RATELIMIT_DEFAULT` | Rate limiting toggle and default limits |
 | `BLOCK_VPN` | Toggle VPN/proxy blocking on auth routes |
 | `OTP_VALIDITY_SECONDS` | OTP expiry duration (default: 600s) |
 | `FLASK_ENV` | `development` or `production` (controls debug mode, rate limits) |
+
+For Cloudflare Workers deployment, copy `wrangler.jsonc.example` to `wrangler.jsonc` and fill in your secrets.
 
 ---
 
@@ -138,61 +142,83 @@ Environment variables are loaded via `python-dotenv` from `.env`. See [`.env.exa
 
 ```
 Anvaya-Vistara/
-│
-├── .env
-├── .env.example
-├── app.py
-├── config.py
-├── requirements.txt
-├── postgres_sample.sql
-│
-├── blueprints/
-│   ├── admin/
-│   ├── api/
-│   ├── auth/
-│   ├── center/
-│   ├── dashboard/
-│   ├── patient/
-│   ├── phc/
-│   └── region/
-│
-├── static/
-│   ├── js/
-│   │   └── main.js
-│   └── styles.css
-│
-├── templates/
-│   ├── admin/
-│   ├── auth/
-│   ├── center/
-│   ├── dashboard/
-│   ├── errors/
-│   ├── facilities/
-│   ├── patient/
-│   ├── phc/
-│   ├── region/
-│   ├── base.html
-│   └── shell.html
-│
-├── translations/
-│   ├── en.json
-│   └── hi.json
-│
-└── utils/
-    ├── __init__.py
-    ├── audit.py
-    ├── auth_helpers.py
-    ├── constants.py
-    ├── db.py
-    ├── defaults.py
-    ├── email_helper.py
-    ├── i18n.py
-    ├── id_generator.py
-    ├── logger.py
-    ├── notifications.py
-    ├── permissions.py
-    ├── sanitize.py
-    └── security.py
+|
+|-- .env.example
+|-- app.py
+|-- config.py
+|-- worker.py
+|-- wrangler.jsonc.example
+|-- pyproject.toml
+|-- docker-compose.yml
+|-- postgres_sample.sql
+|
+|-- android/
+|   |-- app/
+|   |   |-- build.gradle
+|   |   |-- src/main/java/site/anvaya/app/
+|   |   |   |-- MainActivity.java
+|   |   |-- src/main/res/
+|   |       |-- drawable/
+|   |       |-- layout/
+|   |       |-- mipmap-*/
+|   |
+|   |-- build.gradle
+|   |-- settings.gradle
+|
+|-- blueprints/
+|   |-- admin/
+|   |-- api/
+|   |-- auth/
+|   |-- center/
+|   |-- dashboard/
+|   |-- patient/
+|   |-- phc/
+|   |-- region/
+|
+|-- public/
+|   |-- static/ (compiled assets served by Cloudflare)
+|
+|-- static/
+|   |-- js/
+|   |   |-- main.js
+|   |-- icons/
+|   |-- styles.css
+|   |-- manifest.json
+|   |-- service-worker.js
+|
+|-- templates/
+|   |-- admin/
+|   |-- auth/
+|   |-- center/
+|   |-- dashboard/
+|   |-- errors/
+|   |-- facilities/
+|   |-- patient/
+|   |-- phc/
+|   |-- region/
+|   |-- base.html
+|   |-- shell.html
+|   |-- landing.html
+|
+|-- translations/
+|   |-- en.json
+|   |-- hi.json
+|
+|-- utils/
+    |-- __init__.py
+    |-- audit.py
+    |-- auth_helpers.py
+    |-- constants.py
+    |-- db.py
+    |-- defaults.py
+    |-- email_helper.py
+    |-- i18n.py
+    |-- id_generator.py
+    |-- logger.py
+    |-- notifications.py
+    |-- permissions.py
+    |-- sanitize.py
+    |-- security.py
 ```
 
 ---
@@ -201,36 +227,58 @@ Anvaya-Vistara/
 
 | Layer | Technology |
 |---|---|
-| **Backend** | Python 3.x, Flask 3.1 |
-| **Database** | PostgreSQL (Supabase-hosted), psycopg2 |
-| **Frontend** | HTML5, Vanilla CSS3, JavaScript |
+| **Backend** | Python 3.13+, Flask 3.1 |
+| **Database** | PostgreSQL (Supabase-hosted), pg8000 |
+| **Hosting** | Cloudflare Workers (Python Workers), Hyperdrive |
+| **Frontend** | HTML5, Vanilla CSS3, JavaScript (server-rendered via Jinja2) |
+| **PWA** | Service Worker, Web App Manifest |
+| **Android** | Native WebView wrapper (Java, Android SDK 34) |
 | **Email** | Mailjet REST API |
-| **Auth & Security** | bcrypt, Flask-Session, Flask-Limiter, Flask-WTF (CSRF), IP lockout |
-| **Rate Limiting** | Flask-Limiter (in-memory or Redis-backed) |
+| **Auth & Security** | bcrypt, PyOTP, Flask-WTF (CSRF), signed cookie sessions |
+| **Rate Limiting** | Flask-Limiter (in-memory) |
+| **i18n** | JSON translation files (English, Hindi) |
 
 ---
 
 ## 6. Getting Started
 
 ### Prerequisites
-- Python 3.10+
-- PostgreSQL database (Supabase project)
+- Python 3.13+
+- PostgreSQL database (Supabase project or local)
 - Mailjet account (for transactional email)
+- Cloudflare account (for Workers deployment)
+
+### Local Development
+1. Clone the repository
+2. Copy `.env.example` to `.env` and fill in your credentials
+3. Install dependencies: `pip install -e .`
+4. Run the dev server: `python app.py`
+
+### Cloudflare Workers Deployment
+1. Copy `wrangler.jsonc.example` to `wrangler.jsonc` and fill in secrets
+2. Deploy: `npx wrangler deploy`
+
+### Android App
+1. Open the `android/` directory in Android Studio
+2. Build the APK: `./gradlew assembleRelease`
+
+---
 
 ## 7. Dependencies
 
-All packages are pinned in [`requirements.txt`](requirements.txt):
+All packages are defined in [`pyproject.toml`](pyproject.toml):
 
 | Package | Purpose |
 |---|---|
 | `Flask` | Core web framework |
-| `psycopg2-binary` | PostgreSQL database adapter |
-| `Flask-Session` | Server-side filesystem session management |
+| `pg8000` | Pure-Python PostgreSQL driver |
+| `Flask-Session` | Session management |
 | `Flask-Limiter` | IP and endpoint rate limiting |
 | `Flask-WTF` + `WTForms` | Form validation and CSRF protection |
 | `Flask-Cors` | Cross-Origin Resource Sharing |
 | `bcrypt` | Secure password hashing |
+| `pyotp` | TOTP/OTP generation and verification |
 | `mailjet-rest` | Transactional email delivery API |
 | `python-dotenv` | `.env` file loading |
 | `requests` | Outbound HTTP calls |
-| `msgspec` | Fast serialization |
+| `Jinja2` | HTML templating engine |

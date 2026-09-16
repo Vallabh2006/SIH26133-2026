@@ -2,8 +2,10 @@ package site.anvaya.app;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -18,12 +20,16 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
+import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
+import android.webkit.WebBackForwardList;
 import android.webkit.WebChromeClient;
+import android.webkit.WebHistoryItem;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -40,12 +46,10 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-
-import com.journeyapps.barcodescanner.ScanContract;
-import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,14 +61,15 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String PREFS_NAME = "AnvayaPrefs";
     public static final String KEY_SERVER_URL = "server_url";
-    public static final String DEFAULT_HTTP_URL = "http://10.0.2.2:5000/";
-    public static final long CONNECTION_TIMEOUT_MS = 5000;
-    
+    public static final String DEFAULT_HTTP_URL = "https://app.anvaya.site/";
+    public static final String CHANNEL_ID = "anvaya_notifications";
+    public static final int NOTIFICATION_ID = 1001;
+    public static final long CONNECTION_TIMEOUT_MS = 15000;
+
     private WebView webView;
     private ProgressBar progressBar;
     private SwipeRefreshLayout swipeRefreshLayout;
     private LinearLayout offlineLayout;
-    private Button btnScanQr;
     private Button btnRetry;
     private Button btnChangeUrl;
     private SharedPreferences prefs;
@@ -72,26 +77,13 @@ public class MainActivity extends AppCompatActivity {
     private final Handler timeoutHandler = new Handler(Looper.getMainLooper());
     private Runnable timeoutRunnable;
     private boolean pageLoadedSuccessfully = false;
+    private long lastBackPressedTime = 0;
 
     private ValueCallback<Uri[]> filePathCallback;
     private String cameraPhotoPath;
 
     private GeolocationPermissions.Callback geolocationCallback;
     private String geolocationOrigin;
-
-    private final ActivityResultLauncher<ScanOptions> qrScannerLauncher =
-            registerForActivityResult(new ScanContract(), result -> {
-                if (result.getContents() != null) {
-                    String scannedUrl = result.getContents().trim();
-                    if (!scannedUrl.startsWith("http://") && !scannedUrl.startsWith("https://")) {
-                        scannedUrl = "http://" + scannedUrl;
-                    }
-                    prefs.edit().putString(KEY_SERVER_URL, scannedUrl).apply();
-                    Toast.makeText(this, "Connecting to: " + scannedUrl, Toast.LENGTH_SHORT).show();
-                    hideOffline();
-                    loadUrlWithTimeout(scannedUrl);
-                }
-            });
 
     private final ActivityResultLauncher<String[]> requestPermissionsLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -108,24 +100,18 @@ public class MainActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (filePathCallback == null) return;
                 Uri[] results = null;
-
-                if (result.getResultCode() == Activity.RESULT_OK) {
+                if (result.getResultCode() == RESULT_OK) {
                     Intent data = result.getData();
-                    if (data == null || data.getData() == null) {
-                        if (cameraPhotoPath != null) {
-                            results = new Uri[]{Uri.parse(cameraPhotoPath)};
+                    if (data != null && data.getData() != null) {
+                        results = new Uri[]{data.getData()};
+                    } else if (data != null && data.getClipData() != null) {
+                        int count = data.getClipData().getItemCount();
+                        results = new Uri[count];
+                        for (int i = 0; i < count; i++) {
+                            results[i] = data.getClipData().getItemAt(i).getUri();
                         }
-                    } else {
-                        String dataString = data.getDataString();
-                        if (dataString != null) {
-                            results = new Uri[]{Uri.parse(dataString)};
-                        } else if (data.getClipData() != null) {
-                            int count = data.getClipData().getItemCount();
-                            results = new Uri[count];
-                            for (int i = 0; i < count; i++) {
-                                results[i] = data.getClipData().getItemAt(i).getUri();
-                            }
-                        }
+                    } else if (cameraPhotoPath != null) {
+                        results = new Uri[]{Uri.parse(cameraPhotoPath)};
                     }
                 }
                 filePathCallback.onReceiveValue(results);
@@ -139,54 +125,95 @@ public class MainActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
-        webView = findViewById(R.id.webView);
-        progressBar = findViewById(R.id.progressBar);
-        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
-        offlineLayout = findViewById(R.id.offlineLayout);
-        btnScanQr = findViewById(R.id.btnScanQr);
-        btnRetry = findViewById(R.id.btnRetry);
-        btnChangeUrl = findViewById(R.id.btnChangeUrl);
-
-        setupCookies();
-        setupSwipeRefresh();
+        initViews();
+        setupNotificationChannel();
+        requestNotificationPermission();
         setupWebView();
         setupBackNavigation();
-
-        btnScanQr.setOnClickListener(v -> launchQrScanner());
-
-        btnRetry.setOnClickListener(v -> {
-            hideOffline();
-            loadUrlWithTimeout(getServerUrl());
-        });
-
-        btnChangeUrl.setOnClickListener(v -> showChangeUrlDialog());
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
-            loadUrlWithTimeout(getServerUrl());
+            String initialUrl = prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
+            loadUrlWithTimeout(initialUrl);
         }
     }
 
-    private void setupCookies() {
-        CookieManager cookieManager = CookieManager.getInstance();
-        cookieManager.setAcceptCookie(true);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            cookieManager.setAcceptThirdPartyCookies(webView, true);
+    private void initViews() {
+        webView = findViewById(R.id.webView);
+        progressBar = findViewById(R.id.progressBar);
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+        offlineLayout = findViewById(R.id.offlineLayout);
+        btnRetry = findViewById(R.id.btnRetry);
+        btnChangeUrl = findViewById(R.id.btnChangeUrl);
+
+        swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(this, R.color.primary));
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (isNetworkAvailable()) {
+                webView.reload();
+            } else {
+                swipeRefreshLayout.setRefreshing(false);
+                Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnRetry.setOnClickListener(v -> {
+            String url = prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
+            hideOffline();
+            loadUrlWithTimeout(url);
+        });
+
+        btnChangeUrl.setOnClickListener(v -> showServerUrlDialog());
+    }
+
+    private void setupNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Anvaya Vistara Notifications";
+            String description = "Alerts, teleconsult updates, and reminders";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            channel.enableVibration(true);
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
         }
     }
 
-    private void launchQrScanner() {
-        ScanOptions options = new ScanOptions();
-        options.setPrompt("Point camera at the QR code in the terminal");
-        options.setBeepEnabled(true);
-        options.setOrientationLocked(true);
-        options.setCaptureActivity(PortraitCaptureActivity.class);
-        qrScannerLauncher.launch(options);
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionsLauncher.launch(new String[]{Manifest.permission.POST_NOTIFICATIONS});
+            }
+        }
     }
 
-    private String getServerUrl() {
-        return prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
+    private void showServerUrlDialog() {
+        String currentUrl = prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
+        EditText input = new EditText(this);
+        input.setText(currentUrl);
+        input.setSingleLine(true);
+        input.setPadding(48, 32, 48, 32);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Configure Server Endpoint")
+                .setMessage("Enter the healthcare portal URL:")
+                .setView(input)
+                .setPositiveButton("Connect", (dialog, which) -> {
+                    String newUrl = input.getText().toString().trim();
+                    if (!newUrl.isEmpty()) {
+                        if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
+                            newUrl = "https://" + newUrl;
+                        }
+                        prefs.edit().putString(KEY_SERVER_URL, newUrl).apply();
+                        hideOffline();
+                        loadUrlWithTimeout(newUrl);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void loadUrlWithTimeout(String url) {
@@ -194,8 +221,14 @@ public class MainActivity extends AppCompatActivity {
         pageLoadedSuccessfully = false;
         progressBar.setVisibility(View.VISIBLE);
 
+        if (!isNetworkAvailable()) {
+            showOffline();
+            return;
+        }
+
         timeoutRunnable = () -> {
             if (!pageLoadedSuccessfully) {
+                webView.stopLoading();
                 showOffline();
             }
         };
@@ -211,65 +244,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showChangeUrlDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Configure Server URL");
-
-        final EditText input = new EditText(this);
-        input.setHint("http://10.185.171.51:5000 or http://10.0.2.2:5000");
-        input.setText(getServerUrl());
-        input.setSingleLine(true);
-        int padding = (int) (16 * getResources().getDisplayMetrics().density);
-        input.setPadding(padding, padding, padding, padding);
-
-        builder.setView(input);
-
-        builder.setPositiveButton("Save & Connect", (dialog, which) -> {
-            String newUrl = input.getText().toString().trim();
-            if (!newUrl.isEmpty()) {
-                if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
-                    newUrl = "http://" + newUrl;
-                }
-                prefs.edit().putString(KEY_SERVER_URL, newUrl).apply();
-                hideOffline();
-                loadUrlWithTimeout(newUrl);
-            }
-        });
-
-        builder.setNeutralButton("Reset Default", (dialog, which) -> {
-            prefs.edit().putString(KEY_SERVER_URL, DEFAULT_HTTP_URL).apply();
-            hideOffline();
-            loadUrlWithTimeout(DEFAULT_HTTP_URL);
-        });
-
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-        builder.show();
-    }
-
-    private void setupSwipeRefresh() {
-        swipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.accent, R.color.teal_green);
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            loadUrlWithTimeout(getServerUrl());
-        });
-    }
-
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setUseWideViewPort(true);
-        settings.setBuiltInZoomControls(false);
-        settings.setDisplayZoomControls(false);
-        settings.setSupportZoom(false);
+        settings.setGeolocationEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+
+        String defaultUa = settings.getUserAgentString();
+        settings.setUserAgentString(defaultUa + " AnvayaVistaraApp/1.1");
+
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.setAcceptThirdPartyCookies(webView, true);
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
@@ -279,6 +277,9 @@ public class MainActivity extends AppCompatActivity {
             settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         }
 
+        webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
+        webView.addJavascriptInterface(new AndroidBridge(this), "Android");
+
         webView.setWebViewClient(new CustomWebViewClient());
         webView.setWebChromeClient(new CustomWebChromeClient());
     }
@@ -287,14 +288,57 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack();
-                } else {
-                    setEnabled(false);
-                    getOnBackPressedDispatcher().onBackPressed();
-                }
+                navigateBackOrExit();
             }
         });
+    }
+
+    private void navigateBackOrExit() {
+        if (webView.canGoBack()) {
+            WebBackForwardList history = webView.copyBackForwardList();
+            int currentIndex = history.getCurrentIndex();
+            
+            if (currentIndex > 0) {
+                WebHistoryItem currentItem = history.getItemAtIndex(currentIndex);
+                WebHistoryItem prevItem = history.getItemAtIndex(currentIndex - 1);
+                
+                String currentUrl = currentItem != null ? currentItem.getUrl() : "";
+                String prevUrl = prevItem != null ? prevItem.getUrl() : "";
+                
+                // If previous page is login/redirect and user is on target page, jump 2 back
+                if (currentUrl.contains("/admin/@") || currentUrl.contains("/patient/@") || currentUrl.contains("/phc/@")) {
+                    if (prevUrl.endsWith("/login") || prevUrl.endsWith("/app") || prevUrl.contains("/auth/")) {
+                        if (currentIndex > 1) {
+                            webView.goBackOrForward(-2);
+                            return;
+                        }
+                    }
+                }
+            }
+            webView.goBack();
+        } else {
+            long now = System.currentTimeMillis();
+            if (now - lastBackPressedTime < 2000) {
+                finish();
+            } else {
+                lastBackPressedTime = now;
+                Toast.makeText(MainActivity.this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            navigateBackOrExit();
+            return true;
+        } else if (keyCode == KeyEvent.KEYCODE_FORWARD) {
+            if (webView.canGoForward()) {
+                webView.goForward();
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     private void showOffline() {
@@ -329,6 +373,77 @@ public class MainActivity extends AppCompatActivity {
         String imageFileName = "JPEG_" + timeStamp + "_";
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         return File.createTempFile(imageFileName, ".jpg", storageDir);
+    }
+
+    public class AndroidBridge {
+        private final Context context;
+
+        public AndroidBridge(Context context) {
+            this.context = context;
+        }
+
+        @JavascriptInterface
+        public void showToast(String message) {
+            if (message != null && !message.isEmpty()) {
+                runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
+            }
+        }
+
+        @JavascriptInterface
+        public void showNotification(String title, String message, String targetUrl) {
+            runOnUiThread(() -> {
+                NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm == null) return;
+
+                Intent intent = new Intent(context, MainActivity.class);
+                if (targetUrl != null && !targetUrl.isEmpty()) {
+                    intent.setData(Uri.parse(targetUrl));
+                }
+                intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+                PendingIntent pendingIntent = PendingIntent.getActivity(
+                        context,
+                        (int) System.currentTimeMillis(),
+                        intent,
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT : PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentTitle(title != null ? title : "Anvaya Vistara")
+                        .setContentText(message != null ? message : "")
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(message != null ? message : ""))
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(true)
+                        .setContentIntent(pendingIntent);
+
+                nm.notify((int) System.currentTimeMillis(), builder.build());
+            });
+        }
+
+        @JavascriptInterface
+        public void navigateBack() {
+            runOnUiThread(MainActivity.this::navigateBackOrExit);
+        }
+
+        @JavascriptInterface
+        public void navigateForward() {
+            runOnUiThread(() -> {
+                if (webView.canGoForward()) {
+                    webView.goForward();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean canGoBack() {
+            return webView.canGoBack();
+        }
+
+        @JavascriptInterface
+        public boolean canGoForward() {
+            return webView.canGoForward();
+        }
     }
 
     private class CustomWebViewClient extends WebViewClient {

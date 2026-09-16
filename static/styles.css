@@ -1939,3 +1939,28 @@ tbody tr:hover {
 tbody tr {
   transition: background-color 0.2s ease !important;
 }
+
+/* Global Submit Button Loading State */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-loading,
+button[disabled],
+input[type="submit"][disabled] {
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.8 !important;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}

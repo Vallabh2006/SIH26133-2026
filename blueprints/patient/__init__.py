@@ -112,6 +112,9 @@ def user_profile(username=None):
         username = user.get('username')
         
     username = username.strip().lstrip('@')
+    if user.get('role') == 'patient' and user.get('username') != username:
+        flash('Access denied: You are only authorized to view your own patient portal.', 'error')
+        return redirect(url_for('patient.user_profile', username=user.get('username')))
     target_user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
     
     patient = None
@@ -325,6 +328,9 @@ def patient_emergency(username=None):
     if not username:
         username = user.get('username')
     username = username.strip().lstrip('@')
+    if user.get('role') == 'patient' and user.get('username') != username:
+        flash('Access denied: You are only authorized to view your own teleconsultations.', 'error')
+        return redirect(url_for('patient.patient_teleconsult', username=user.get('username')))
     target_user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
     patient = None
     facility = None
@@ -477,6 +483,9 @@ def patient_appointments(username=None):
     if not username:
         username = user.get('username')
     username = username.strip().lstrip('@')
+    if user.get('role') == 'patient' and user.get('username') != username:
+        flash('Access denied: You are only authorized to view your own appointments.', 'error')
+        return redirect(url_for('patient.patient_appointments', username=user.get('username')))
     target_user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
     patient = None
     appointments = []

@@ -8,13 +8,22 @@ _fallback_lang = 'en'
 
 def load_translations(app):
     trans_dir = os.path.join(app.root_path, 'translations')
-    if not os.path.isdir(trans_dir):
-        return
-    for fname in os.listdir(trans_dir):
-        if fname.endswith('.json'):
-            lang = fname.rsplit('.', 1)[0]
-            with open(os.path.join(trans_dir, fname), 'r', encoding='utf-8') as f:
-                _translations[lang] = json.load(f)
+    if os.path.isdir(trans_dir):
+        try:
+            for fname in os.listdir(trans_dir):
+                if fname.endswith('.json'):
+                    lang = fname.rsplit('.', 1)[0]
+                    with open(os.path.join(trans_dir, fname), 'r', encoding='utf-8') as f:
+                        _translations[lang] = json.load(f)
+        except Exception:
+            pass
+
+    if not _translations:
+        try:
+            from utils.translations_data import TRANSLATIONS
+            _translations.update(TRANSLATIONS)
+        except ImportError:
+            pass
 
 
 def get_locale():

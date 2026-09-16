@@ -251,3 +251,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (!form || form.hasAttribute('data-no-block')) return;
+
+    const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+    if (submitBtn && !submitBtn.disabled) {
+      setTimeout(() => {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('btn-loading');
+        
+        const isInput = submitBtn.tagName.toLowerCase() === 'input';
+        const originalText = isInput ? submitBtn.value : submitBtn.innerHTML;
+        submitBtn.setAttribute('data-original-text', originalText);
+        
+        if (isInput) {
+          submitBtn.value = 'Please wait...';
+        } else {
+          submitBtn.innerHTML = '<span style="display:inline-flex; align-items:center; gap:8px; justify-content:center;"><span class="btn-spinner"></span> <span>Please wait...</span></span>';
+        }
+      }, 10);
+    }
+  });
+});

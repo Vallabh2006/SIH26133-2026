@@ -134,12 +134,15 @@ def clear_ip_login_attempts(ip=None):
 
 
 def check_vpn_proxy(ip=None):
-    block_vpn = os.getenv('BLOCK_VPN', 'true').lower() == 'true'
+    block_vpn = os.getenv('BLOCK_VPN', 'false').lower() == 'true'
+    is_testing = False
     if current_app:
         block_vpn = current_app.config.get('BLOCK_VPN', block_vpn)
-        if current_app.testing or current_app.config.get('TESTING'):
-            if not request or not request.headers.get('X-Force-VPN-Check'):
-                return False, None
+        is_testing = bool(current_app.testing or current_app.config.get('TESTING'))
+
+    if is_testing:
+        if not request or not request.headers.get('X-Force-VPN-Check'):
+            return False, None
 
     if not block_vpn:
         return False, None
@@ -147,13 +150,13 @@ def check_vpn_proxy(ip=None):
     if ip is None:
         ip = get_client_ip()
 
-    if request and request.headers.get('X-Force-VPN-Check') == '1':
+    if is_testing and request and request.headers.get('X-Force-VPN-Check') == '1':
         return True, 'Simulated VPN Connection'
 
     if is_private_ip(ip):
         return False, None
 
-    if request and request.headers.get('X-Bypass-VPN-Check') == '1':
+    if is_testing and request and request.headers.get('X-Bypass-VPN-Check') == '1':
         return False, None
 
     if request:

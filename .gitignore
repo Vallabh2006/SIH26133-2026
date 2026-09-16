@@ -1,0 +1,87 @@
+# Environments & Secrets
+.env
+.dev.vars
+.env.*
+!.env.example
+
+# Wrangler config (contains secrets)
+wrangler.jsonc
+!wrangler.jsonc.example
+
+# Config files
+
+# Virtual Environments
+myenv/
+venv/
+.venv/
+env/
+ENV/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Python Modules (vendored dependencies)
+python_modules/
+
+# Logs & Database files
+*.log
+*.sqlite
+*.sqlite3
+*.db
+API.md
+
+# System & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cloudflare Wrangler & Node
+.wrangler/
+node_modules/
+
+# Flask Sessions
+.flask_sessions/
+
+# Android Build, SDKs & Artifacts
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/gradle-dist/
+android/jdk/
+*.apk
+*.aab
+
+# Lock files
+pylock.toml
+
+# Misc
+.ignore
+.wranglerignore
+uv.lock

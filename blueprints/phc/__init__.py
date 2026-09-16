@@ -725,7 +725,7 @@ def teleconsult_room(session_id):
 
     messages = query_db("""
         SELECT tm.*, u.full_name as sender_name, u.role as sender_role,
-               DATE_FORMAT(tm.sent_at, '%%h:%%i %%p') as time_formatted
+               TO_CHAR(tm.sent_at, 'HH12:MI AM') as time_formatted
         FROM teleconsult_messages tm
         LEFT JOIN users u ON tm.sender_id = u.id
         WHERE tm.session_id = %s
@@ -800,7 +800,7 @@ def get_teleconsult_messages(session_id):
 
     messages = query_db("""
         SELECT tm.*, u.full_name as sender_name, u.role as sender_role,
-               DATE_FORMAT(tm.sent_at, '%%h:%%i %%p') as time_formatted
+               TO_CHAR(tm.sent_at, 'HH12:MI AM') as time_formatted
         FROM teleconsult_messages tm
         LEFT JOIN users u ON tm.sender_id = u.id
         WHERE tm.session_id = %s

@@ -1,11 +1,13 @@
 import time
 from datetime import datetime
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, current_app
 from utils.auth_helpers import get_current_user
 from utils.db import query_db, execute_db
 from app import limiter
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+SUPPORTED_LANGUAGES = {'en', 'hi', 'mr', 'ta', 'te', 'kn', 'bn', 'gu', 'pa', 'ml', 'or'}
 
 
 @api_bp.route('/health')
@@ -71,32 +73,25 @@ def get_notifications():
     )
     count = unread_count['cnt'] if unread_count else 0
 
+    formatted_notifs = [
+        {
+            'id': n['id'],
+            'title': n['title'],
+            'body': n.get('body', ''),
+            'link': n.get('link', ''),
+            'is_read': bool(n.get('is_read')),
+            'created_at': n['created_at'].isoformat() if hasattr(n['created_at'], 'isoformat') else str(n['created_at'])
+        } for n in notifs
+    ]
+
     return jsonify({
         'ok': True,
         'data': {
             'count': count,
-            'notifications': [
-                {
-                    'id': n['id'],
-                    'title': n['title'],
-                    'body': n.get('body', ''),
-                    'link': n.get('link', ''),
-                    'is_read': bool(n.get('is_read')),
-                    'created_at': n['created_at'].isoformat() if hasattr(n['created_at'], 'isoformat') else str(n['created_at'])
-                } for n in notifs
-            ]
+            'notifications': formatted_notifs
         },
         'count': count,
-        'notifications': [
-            {
-                'id': n['id'],
-                'title': n['title'],
-                'body': n.get('body', ''),
-                'link': n.get('link', ''),
-                'is_read': bool(n.get('is_read')),
-                'created_at': n['created_at'].isoformat() if hasattr(n['created_at'], 'isoformat') else str(n['created_at'])
-            } for n in notifs
-        ]
+        'notifications': formatted_notifs
     })
 
 
@@ -121,7 +116,10 @@ def mark_notifications_read():
 @api_bp.route('/set-lang', methods=['POST'])
 def set_lang():
     data = request.get_json(silent=True) or {}
-    lang = data.get('lang', 'en')
+    lang = (data.get('lang') or 'en').strip().lower()
+    if lang not in SUPPORTED_LANGUAGES:
+        lang = 'en'
+        
     session['lang'] = lang
 
     if 'user_id' in session:
@@ -130,6 +128,7 @@ def set_lang():
         except Exception:
             pass
 
+    is_secure = request.is_secure or (request.headers.get('X-Forwarded-Proto') == 'https')
     resp = jsonify({'ok': True, 'data': {'lang': lang}, 'lang': lang, 'message': 'Language updated'})
-    resp.set_cookie('lang', lang, max_age=365*24*3600)
+    resp.set_cookie('lang', lang, max_age=365*24*3600, httponly=True, samesite='Lax', secure=is_secure)
     return resp

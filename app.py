@@ -48,12 +48,19 @@ def create_app(config_name=None):
     if app.config.get('TESTING'):
         app.config['WTF_CSRF_ENABLED'] = False
 
-    Session(app)
+    session_type = app.config.get('SESSION_TYPE')
+    if session_type and session_type not in ('cookie', 'signed_cookie', 'null'):
+        if session_type == 'filesystem':
+            os.makedirs(app.config.get('SESSION_FILE_DIR', '/tmp/.flask_sessions'), exist_ok=True)
+        Session(app)
     init_db(app)
     init_i18n(app)
     csrf.init_app(app)
-    limiter.init_app(app)
-    limiter.enabled = app.config.get('RATELIMIT_ENABLED', True)
+    try:
+        limiter.init_app(app)
+        limiter.enabled = app.config.get('RATELIMIT_ENABLED', True)
+    except RuntimeError:
+        limiter.enabled = False
     cors_origins_env = os.getenv('CORS_ALLOWED_ORIGINS')
     if cors_origins_env:
         allowed_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
@@ -99,7 +106,7 @@ def create_app(config_name=None):
     def inject_user():
         from utils.permissions import has_permission, can
         user = None
-        if 'user_id' in session:
+        if session and 'user_id' in session:
             try:
                 user = get_current_user()
             except Exception:
@@ -114,7 +121,7 @@ def create_app(config_name=None):
         validate_user_session_logic()
 
     def validate_user_session_logic():
-        if 'user_id' in session and 'session_version' in session:
+        if session and 'user_id' in session and 'session_version' in session:
             try:
                 row = query_db('SELECT session_version, is_active FROM users WHERE id = %s', (session['user_id'],), one=True)
                 if not row or not row.get('is_active') or row.get('session_version', 1) != session.get('session_version'):
@@ -131,16 +138,16 @@ def create_app(config_name=None):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
-        if not app.debug and request.is_secure:
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-            response.headers["Content-Security-Policy"] = (
-                "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' https://unpkg.com; "
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
-                "font-src 'self' https://fonts.gstatic.com; "
-                "img-src 'self' data: https://*.tile.openstreetmap.org; "
-                "connect-src 'self'"
-            )
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https://*.tile.openstreetmap.org; "
+            "connect-src 'self'"
+        )
+        if not app.debug and (request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https'):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
 
         if request.path.startswith("/static/"):
             response.headers["Cache-Control"] = "public, max-age=604800, immutable"
@@ -676,12 +683,13 @@ def create_app(config_name=None):
         from werkzeug.exceptions import HTTPException
         if isinstance(e, HTTPException):
             return e
-        logger.error("Unhandled Exception Caught: %s on %s %s", str(e), request.method, request.path, exc_info=True)
+        import sys, traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
+        logger.error("Unhandled Exception Caught: %s on %s %s", str(e), request.method, request.path)
         if request.path.startswith("/api/") or request.is_json:
             return jsonify({"error": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred. Please try again later."}), 500
         return render_template("errors/500.html"), 500
-
-
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):

@@ -45,14 +45,14 @@
         <ImageView
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:src="@mipmap/ic_launcher"
+            android:src="@drawable/ic_anvaya_logo"
             android:contentDescription="@string/app_name" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Anvaya Vistara Server"
+            android:text="Anvaya Vistara"
             android:textColor="@color/text_dark"
             android:textSize="22sp"
             android:textStyle="bold" />
@@ -64,30 +64,20 @@
             android:layout_marginTop="10dp"
             android:gravity="center"
             android:lineSpacingExtra="2dp"
-            android:text="Cannot reach server. Scan the QR code from your terminal or retry."
+            android:text="Unable to reach the healthcare portal. Please check your network connection and retry."
             android:textColor="@color/text_muted"
             android:textSize="14sp" />
 
         <Button
-            android:id="@+id/btnScanQr"
+            android:id="@+id/btnRetry"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:layout_marginTop="28dp"
             android:backgroundTint="@color/primary"
-            android:text="📷  Scan Terminal QR Code"
+            android:text="🔄  Retry Connection"
             android:textColor="@color/white"
             android:textSize="15sp"
             android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btnRetry"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="12dp"
-            android:strokeColor="@color/primary"
-            android:text="🔄  Retry Connection"
-            android:textColor="@color/primary" />
 
         <Button
             android:id="@+id/btnChangeUrl"
@@ -95,7 +85,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="⌨️  Enter IP Manually"
+            android:text="⚙️  Server Settings"
             android:textColor="@color/accent" />
 
     </LinearLayout>
