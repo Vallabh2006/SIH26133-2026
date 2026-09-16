@@ -13,7 +13,7 @@ from utils.id_generator import generate_staff_id, generate_facility_id
 from utils.sanitize import validate_username
 from app import limiter
 
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin', template_folder='../../templates/admin')
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 ROLE_DISPLAY_MAP = {

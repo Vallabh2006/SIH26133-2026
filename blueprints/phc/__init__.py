@@ -12,7 +12,7 @@ from utils.constants import DEFAULT_ALLERGIES, DEFAULT_DISTRICT
 from app import limiter, DEFAULT_DEPARTMENT, DEFAULT_WALK_IN_REASON
 from utils.sanitize import sanitize_csv_cell, sanitize_text
 
-phc_bp = Blueprint('phc', __name__, url_prefix='/phc', template_folder='../../templates/phc')
+phc_bp = Blueprint('phc', __name__, url_prefix='/phc')
 
 ALLOWED_ROLES = ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist', 'system_admin', 'region_admin')
 

@@ -1,29 +1,64 @@
 import os
 import re
 import logging
-from flask import current_app
+from flask import current_app, request, has_request_context
 from mailjet_rest import Client
 
 from utils.logger import get_logger
 logger = get_logger("email")
 
+# Fallback credentials matching verified Mailjet account
+DEFAULT_MJ_APIKEY = "ad73e1f679e427e116206b84e4c10667"
+DEFAULT_MJ_SECRET = "8d1a07d0cf55d247934b6cb7ea7e5e56"
+DEFAULT_MJ_SENDER = "no-reply@thekatbot.xyz"
+DEFAULT_MJ_SENDER_NAME = "Anvaya Vistara"
+
 def get_mailjet_credentials():
-    api_key = (
-        os.getenv("MAIL_USERNAME")
-        or os.getenv("MJ_APIKEY_PUBLIC")
-        or os.getenv("MAILJET_API_KEY")
-    )
-    api_secret = (
-        os.getenv("MAIL_PASSWORD")
-        or os.getenv("MJ_APIKEY_PRIVATE")
-        or os.getenv("SMTP_PASSWORD")
-    )
-    sender_email = (
-        os.getenv("MAIL_DEFAULT_SENDER")
-        or os.getenv("MJ_SENDER_EMAIL")
-        or os.getenv("SMTP_EMAIL")
-    )
-    sender_name = os.getenv("MAIL_SENDER_NAME", "Anvaya Vistara")
+    api_key = None
+    api_secret = None
+    sender_email = None
+    sender_name = None
+
+    # 1. Try Cloudflare Workers env from request context (WSGI environ)
+    if has_request_context():
+        try:
+            w_env = request.environ.get("workers.env")
+            if w_env:
+                api_key = getattr(w_env, "MAIL_USERNAME", None) or getattr(w_env, "MJ_APIKEY_PUBLIC", None)
+                api_secret = getattr(w_env, "MAIL_PASSWORD", None) or getattr(w_env, "MJ_APIKEY_PRIVATE", None)
+                sender_email = getattr(w_env, "MAIL_DEFAULT_SENDER", None) or getattr(w_env, "MJ_SENDER_EMAIL", None)
+                sender_name = getattr(w_env, "MAIL_SENDER_NAME", None)
+        except Exception:
+            pass
+
+    # 2. Try os.environ
+    if not api_key:
+        api_key = (
+            os.getenv("MAIL_USERNAME")
+            or os.getenv("MJ_APIKEY_PUBLIC")
+            or os.getenv("MAILJET_API_KEY")
+        )
+    if not api_secret:
+        api_secret = (
+            os.getenv("MAIL_PASSWORD")
+            or os.getenv("MJ_APIKEY_PRIVATE")
+            or os.getenv("SMTP_PASSWORD")
+        )
+    if not sender_email:
+        sender_email = (
+            os.getenv("MAIL_DEFAULT_SENDER")
+            or os.getenv("MJ_SENDER_EMAIL")
+            or os.getenv("SMTP_EMAIL")
+        )
+    if not sender_name:
+        sender_name = os.getenv("MAIL_SENDER_NAME")
+
+    # 3. Fallback defaults
+    api_key = str(api_key or DEFAULT_MJ_APIKEY).strip()
+    api_secret = str(api_secret or DEFAULT_MJ_SECRET).strip()
+    sender_email = str(sender_email or DEFAULT_MJ_SENDER).strip()
+    sender_name = str(sender_name or DEFAULT_MJ_SENDER_NAME).strip()
+
     return api_key, api_secret, sender_email, sender_name
 
 

@@ -218,6 +218,6 @@ def block_if_vpn():
             return jsonify({'error': 'VPN_DETECTED', 'message': msg, 'reason': reason}), 403
         flash(msg, 'error')
         if request.path.startswith('/signup'):
-            return render_template('signup.html', form_data={})
-        return render_template('login.html', active_tab='username', form_data={})
+            return render_template('auth/signup.html', form_data={})
+        return render_template('auth/login.html', active_tab='username', form_data={})
     return None

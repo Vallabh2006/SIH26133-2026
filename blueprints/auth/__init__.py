@@ -21,7 +21,7 @@ from utils.sanitize import validate_username, validate_email, validate_phone
 from utils.security import check_ip_lockout, record_failed_ip_login, clear_ip_login_attempts, block_if_vpn, get_client_ip
 from app import limiter
 
-auth_bp = Blueprint('auth', __name__, template_folder='../../templates/auth')
+auth_bp = Blueprint('auth', __name__)
 
 
 def hash_otp(code):
@@ -92,7 +92,7 @@ def login():
             remaining_mins = int(remaining_secs / 60) + 1
             log_audit('ip_lockout_blocked_attempt', 'ip', None, {'ip': client_ip, 'remaining_minutes': remaining_mins})
             flash(f'Too many failed login attempts from your IP address ({client_ip}). Access is temporarily suspended. Please try again in {remaining_mins} minute(s).', 'error')
-            return render_template('login.html', active_tab=active_tab, form_data=form_data)
+            return render_template('auth/login.html', active_tab=active_tab, form_data=form_data)
 
         login_type = request.form.get('login_type', 'username')
         form_data = request.form
@@ -102,7 +102,7 @@ def login():
             email = request.form.get('email', '').strip().lower()
             if not email:
                 flash('Please enter your registered email address.', 'error')
-                return render_template('login.html', active_tab='email', form_data=form_data)
+                return render_template('auth/login.html', active_tab='email', form_data=form_data)
                 
             user = query_db('SELECT * FROM users WHERE LOWER(email) = %s AND is_active = 1', (email,), one=True)
             if not user:
@@ -113,7 +113,7 @@ def login():
                     flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
                 else:
                     flash(f'No active account found with this email address. {rem_attempts} attempt(s) remaining for your IP.', 'error')
-                return render_template('login.html', active_tab='email', form_data=form_data)
+                return render_template('auth/login.html', active_tab='email', form_data=form_data)
 
             otp_code = str(secrets.randbelow(900000) + 100000)
             session['pending_otp'] = hash_otp(otp_code)
@@ -135,7 +135,7 @@ def login():
 
             if not identifier:
                 flash('Please enter your username or registered email.', 'error')
-                return render_template('login.html', active_tab='username', form_data=form_data)
+                return render_template('auth/login.html', active_tab='username', form_data=form_data)
 
             if '@' in identifier:
                 user = query_db('SELECT * FROM users WHERE LOWER(email) = %s AND is_active = 1', (identifier.lower(),), one=True)
@@ -147,7 +147,7 @@ def login():
                         flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
                     else:
                         flash(f'No active account found with this email address. {rem_attempts} attempt(s) remaining for your IP.', 'error')
-                    return render_template('login.html', active_tab='email', form_data=form_data)
+                    return render_template('auth/login.html', active_tab='email', form_data=form_data)
 
                 otp_code = str(secrets.randbelow(900000) + 100000)
                 session['pending_otp'] = hash_otp(otp_code)
@@ -165,7 +165,7 @@ def login():
 
             if not password:
                 flash('Please enter your password.', 'error')
-                return render_template('login.html', active_tab='username', form_data=form_data)
+                return render_template('auth/login.html', active_tab='username', form_data=form_data)
 
             user = query_db('SELECT * FROM users WHERE LOWER(username) = %s AND is_active = 1', (identifier,), one=True)
             
@@ -207,7 +207,7 @@ def login():
                         flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
                     else:
                         flash(f'Invalid username or password. {rem_attempts} attempt(s) remaining for your IP address before temporary suspension.', 'error')
-                    return render_template('login.html', active_tab='username', form_data=form_data)
+                    return render_template('auth/login.html', active_tab='username', form_data=form_data)
             else:
                 is_locked_now, rem_secs, rem_attempts = record_failed_ip_login(client_ip)
                 log_audit('login_failed_user_not_found', 'auth', None, {'identifier': identifier, 'ip': client_ip})
@@ -216,9 +216,9 @@ def login():
                     flash(f'Too many failed attempts. Your IP address ({client_ip}) has been temporarily suspended for {rem_mins} minutes.', 'error')
                 else:
                     flash(f'Invalid username or password. {rem_attempts} attempt(s) remaining for your IP address before temporary suspension.', 'error')
-                return render_template('login.html', active_tab='username', form_data=form_data)
+                return render_template('auth/login.html', active_tab='username', form_data=form_data)
 
-    return render_template('login.html', active_tab=active_tab, form_data=form_data)
+    return render_template('auth/login.html', active_tab=active_tab, form_data=form_data)
 
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
@@ -275,7 +275,7 @@ def signup():
         if errors:
             for e in errors:
                 flash(e, 'error')
-            return render_template('signup.html', form_data=request.form)
+            return render_template('auth/signup.html', form_data=request.form)
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -307,7 +307,7 @@ def signup():
         flash('Account created! Please enter the 6-digit verification code sent to your email.', 'info')
         return redirect(url_for('auth.verify_otp'))
 
-    return render_template('signup.html', form_data={})
+    return render_template('auth/signup.html', form_data={})
 
 
 @auth_bp.route('/verify-otp', methods=['GET', 'POST'])
@@ -336,12 +336,12 @@ def verify_otp():
 
         if not expected_otp or time.time() > expires_at:
             flash('Verification code has expired. Please request a new code.', 'error')
-            return render_template('verify_otp.html', email=email, user=user)
+            return render_template('auth/verify_otp.html', email=email, user=user)
 
         if attempts > 5:
             session.pop('pending_otp', None)
             flash('Too many incorrect verification attempts. The code has been invalidated. Please request a new code.', 'error')
-            return render_template('verify_otp.html', email=email, user=user)
+            return render_template('auth/verify_otp.html', email=email, user=user)
 
         if check_otp(otp_entered, expected_otp):
             execute_db('UPDATE users SET is_active = 1, failed_login_count = 0, locked_until = NULL WHERE id = %s', (user['id'],))
@@ -381,7 +381,7 @@ def verify_otp():
             else:
                 flash('Incorrect verification code. Maximum attempts reached.', 'error')
 
-    return render_template('verify_otp.html', email=email, user=user)
+    return render_template('auth/verify_otp.html', email=email, user=user)
 
 
 @auth_bp.route('/resend-otp', methods=['POST'])
@@ -429,11 +429,11 @@ def accept_invite(token):
         valid_pass, pass_err = validate_password_complexity(password)
         if not valid_pass:
             flash(pass_err, 'error')
-            return render_template('accept_invite.html', user=user, token=token)
+            return render_template('auth/accept_invite.html', user=user, token=token)
 
         if password != confirm:
             flash('Passwords do not match.', 'error')
-            return render_template('accept_invite.html', user=user, token=token)
+            return render_template('auth/accept_invite.html', user=user, token=token)
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         execute_db('''
@@ -449,7 +449,7 @@ def accept_invite(token):
         flash('Staff account successfully activated! Welcome to your clinical dashboard.', 'success')
         return redirect(url_for('auth.app_redirect'))
 
-    return render_template('accept_invite.html', user=user, token=token)
+    return render_template('auth/accept_invite.html', user=user, token=token)
 
 
 @auth_bp.route('/logout', methods=['GET', 'POST'])
@@ -515,7 +515,7 @@ def forgot_password():
         identifier = request.form.get('identifier', '').strip()
         if not identifier:
             flash('Please enter your registered email address or username.', 'error')
-            return render_template('forgot_password.html', identifier=identifier)
+            return render_template('auth/forgot_password.html', identifier=identifier)
 
         if '@' in identifier:
             user = query_db('SELECT * FROM users WHERE LOWER(email) = %s AND is_active = 1', (identifier.lower(),), one=True)
@@ -525,11 +525,11 @@ def forgot_password():
         if not user:
             log_audit('password_reset_user_not_found', 'auth', None, {'identifier': identifier})
             flash('No active account found matching the provided details.', 'error')
-            return render_template('forgot_password.html', identifier=identifier)
+            return render_template('auth/forgot_password.html', identifier=identifier)
 
         if not user.get('email'):
             flash('This account does not have a registered email address. Please contact your system administrator.', 'error')
-            return render_template('forgot_password.html', identifier=identifier)
+            return render_template('auth/forgot_password.html', identifier=identifier)
 
         otp_code = str(secrets.randbelow(900000) + 100000)
         session['reset_otp'] = hash_otp(otp_code)
@@ -545,7 +545,7 @@ def forgot_password():
         flash(f'A 6-digit password reset verification code has been dispatched to {mask_email(user["email"])}.', 'info')
         return redirect(url_for('auth.reset_password'))
 
-    return render_template('forgot_password.html', identifier='')
+    return render_template('auth/forgot_password.html', identifier='')
 
 
 @auth_bp.route('/reset-password', methods=['GET', 'POST'])
@@ -578,17 +578,17 @@ def reset_password():
 
             if not expected_otp or time.time() > expires_at:
                 flash('The verification code has expired. Please request a new reset code.', 'error')
-                return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
+                return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
 
             if attempts > 5:
                 session.pop('reset_otp', None)
                 flash('Too many incorrect verification attempts. The reset code has been invalidated. Please request a new code.', 'error')
-                return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
+                return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
 
             if not check_otp(otp_entered, expected_otp):
                 remaining = 5 - attempts
                 flash(f'Incorrect 6-digit verification code. {remaining} attempt(s) remaining.', 'error')
-                return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
+                return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=False)
 
             session['reset_otp_verified'] = True
             flash('Verification code confirmed! You can now create your new password.', 'success')
@@ -601,11 +601,11 @@ def reset_password():
             valid_pass, pass_err = validate_password_complexity(new_password)
             if not valid_pass:
                 flash(pass_err, 'error')
-                return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=True)
+                return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=True)
 
             if new_password != confirm_password:
                 flash('New password and confirmation password do not match.', 'error')
-                return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=True)
+                return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=True)
 
             hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             new_version = (user.get('session_version') or 1) + 1
@@ -624,7 +624,7 @@ def reset_password():
             flash('Password successfully reset! You can now sign in with your new password.', 'success')
             return redirect(url_for('auth.login'))
 
-    return render_template('reset_password.html', email=mask_email(reset_email), user=user, is_verified=is_verified)
+    return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=is_verified)
 
 
 @auth_bp.route('/resend-reset-otp', methods=['POST'])

@@ -10,7 +10,7 @@ from utils.defaults import get_user_center_id
 from utils.constants import DEFAULT_ALLERGIES, DEFAULT_DISTRICT, DEFAULT_DEPARTMENT, DEFAULT_ONLINE_REASON
 from utils.audit import log_audit
 
-patient_bp = Blueprint('patient', __name__, url_prefix='/patient', template_folder='../../templates/patient')
+patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
 
 
 def format_patient_meta(patient):

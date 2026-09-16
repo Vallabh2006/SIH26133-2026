@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, abort
 from utils.auth_helpers import login_required, get_current_user
 from utils.db import query_db
 
-center_bp = Blueprint('center', __name__, url_prefix='/center', template_folder='../../templates/center')
+center_bp = Blueprint('center', __name__, url_prefix='/center')
 
 def verify_access(user, center_id):
     if user['role'] not in ('region_admin', 'system_admin') and user.get('center_id') != center_id:

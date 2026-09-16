@@ -18,8 +18,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "your-hyperdrive-id",
-      "localConnectionString": "postgresql://user:password@host:5432/database?sslmode=require"
+      "id": "990c3bce2fca4c00bd70292d799c3727"
     }
   ],
   "observability": {
@@ -38,21 +37,8 @@
   "vars": {
     "FLASK_ENV": "production",
     "FLASK_DEBUG": "0",
-    "SECRET_KEY": "generate-with-python-c-import-secrets-print(secrets.token_hex(32))",
     "DB_TYPE": "postgres",
-    "PG_HOST": "db.xxxxx.supabase.co",
-    "PG_PORT": "5432",
-    "PG_USER": "postgres",
-    "PG_PASSWORD": "your-db-password",
-    "PG_DB": "postgres",
-    "PG_SSLMODE": "require",
     "SESSION_TYPE": "cookie",
-    "SMTP_HOST": "in-v3.mailjet.com",
-    "SMTP_PORT": "587",
-    "MAIL_USE_TLS": "True",
-    "MAIL_USERNAME": "your-mailjet-api-key",
-    "MAIL_PASSWORD": "your-mailjet-api-secret",
-    "MAIL_DEFAULT_SENDER": "no-reply@yourdomain.com",
     "RATELIMIT_ENABLED": "true",
     "BLOCK_VPN": "false",
     "OTP_VALIDITY_SECONDS": "600"

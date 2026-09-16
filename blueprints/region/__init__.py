@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from utils.auth_helpers import role_required, get_current_user
 from utils.db import query_db, execute_db
 
-region_bp = Blueprint('region', __name__, url_prefix='/region', template_folder='../../templates/region')
+region_bp = Blueprint('region', __name__, url_prefix='/region')
 
 
 @region_bp.route('/')
