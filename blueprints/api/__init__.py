@@ -132,3 +132,16 @@ def set_lang():
     resp = jsonify({'ok': True, 'data': {'lang': lang}, 'lang': lang, 'message': 'Language updated'})
     resp.set_cookie('lang', lang, max_age=365*24*3600, httponly=True, samesite='Lax', secure=is_secure)
     return resp
+
+
+@api_bp.route('/dashboard/version')
+def dashboard_version():
+    user = get_current_user()
+    center_id = user.get('center_id') if user else None
+    from utils.cache import get_current_version
+    return jsonify({
+        'ok': True,
+        'version': get_current_version(center_id),
+        'global_version': get_current_version(),
+        'timestamp': time.time()
+    })

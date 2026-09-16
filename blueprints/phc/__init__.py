@@ -36,6 +36,22 @@ def dashboard(username=None):
         return redirect(f'/phc/@{user.get("username")}')
         
     center_id = get_user_center_id(user)
+    from utils.cache import get_cached, set_cached, get_cached_reference
+    cache_key = f"dashboard:phc:{center_id}"
+    cached = get_cached(cache_key, center_id=center_id)
+    if cached:
+        return render_template('phc/dashboard.html', 
+                               current_user=user, 
+                               profile_username=user.get('username'),
+                               center=cached['center'], 
+                               queue=cached['queue'], 
+                               inventory=cached['inventory'],
+                               low_stock_items=cached['low_stock_items'],
+                               prescriptions=cached['prescriptions'],
+                               referrals=cached['referrals'],
+                               teleconsults=cached['teleconsults'],
+                               stats=cached['stats'])
+
     center = query_db('SELECT * FROM centers WHERE id = %s', (center_id,), one=True) if center_id else None
     if not center:
         center = {'id': center_id, 'name': 'Healthcare Facility', 'type': 'PHC', 'region': DEFAULT_DISTRICT}
@@ -98,6 +114,17 @@ def dashboard(username=None):
         'teleconsults_count': len(teleconsults)
     }
 
+    set_cached(cache_key, {
+        'center': center,
+        'queue': queue,
+        'inventory': inventory,
+        'low_stock_items': low_stock_items,
+        'prescriptions': prescriptions,
+        'referrals': referrals,
+        'teleconsults': teleconsults,
+        'stats': stats,
+    }, center_id=center_id)
+
     return render_template('phc/dashboard.html', 
                            current_user=user, 
                            profile_username=user.get('username'),
@@ -139,8 +166,8 @@ def queue():
     in_progress_list = [a for a in all_appointments if a.get('status') == 'in_progress']
     completed_list = [a for a in all_appointments if a.get('status') == 'completed']
 
-    patients_list = query_db('SELECT id, full_name, dob, gender, blood_group FROM patients ORDER BY full_name ASC') or []
-    doctors_list = query_db("SELECT id, full_name, role, designation FROM users WHERE role IN ('doctor', 'nurse') AND is_active = 1 ORDER BY full_name ASC") or []
+    patients_list = get_cached_reference("patients_list", lambda: query_db('SELECT id, full_name, dob, gender, blood_group FROM patients ORDER BY full_name ASC') or [])
+    doctors_list = get_cached_reference("doctors_list", lambda: query_db("SELECT id, full_name, role, designation FROM users WHERE role IN ('doctor', 'nurse') AND is_active = 1 ORDER BY full_name ASC") or [])
 
     stats = {
         'total': len(all_appointments),
@@ -906,7 +933,7 @@ def inventory():
     status_filter = request.args.get('status', '').strip()
     category_filter = request.args.get('category', '').strip()
 
-    centers = query_db('SELECT id, name, type FROM centers ORDER BY name ASC') or []
+    centers = get_cached_reference("centers_min", lambda: query_db('SELECT id, name, type FROM centers ORDER BY name ASC') or [])
 
     query = """
         SELECT i.*, c.name as center_name, c.type as center_type 
@@ -939,7 +966,7 @@ def inventory():
     total_count = len(items)
     low_stock_count = sum(1 for item in items if item['quantity'] <= item['reorder_level'])
     
-    categories = query_db('SELECT DISTINCT category FROM inventory_items WHERE category IS NOT NULL ORDER BY category ASC') or []
+    categories = get_cached_reference("categories_list", lambda: query_db('SELECT DISTINCT category FROM inventory_items WHERE category IS NOT NULL ORDER BY category ASC') or [])
     categories = [c['category'] for c in categories if c.get('category')]
 
     current_center = next((c for c in centers if c['id'] == selected_center_id), None)
@@ -1206,9 +1233,9 @@ def referrals():
         'completed': len([r for r in all_refs if r['status'] in ('completed', 'counter_referred')])
     }
 
-    centers_list = query_db('SELECT id, name, type, region, address, phone FROM centers ORDER BY name ASC') or []
-    patients_list = query_db('SELECT id, full_name, dob, gender, blood_group FROM patients ORDER BY full_name ASC') or []
-    ambulances = query_db("SELECT id, driver_name, driver_phone, status, center_id FROM vehicles WHERE type = 'ambulance' ORDER BY status ASC") or []
+    centers_list = get_cached_reference("centers_full", lambda: query_db('SELECT id, name, type, region, address, phone FROM centers ORDER BY name ASC') or [])
+    patients_list = get_cached_reference("patients_list", lambda: query_db('SELECT id, full_name, dob, gender, blood_group FROM patients ORDER BY full_name ASC') or [])
+    ambulances = get_cached_reference("ambulances_list", lambda: query_db("SELECT id, driver_name, driver_phone, status, center_id FROM vehicles WHERE type = 'ambulance' ORDER BY status ASC") or [])
 
     return render_template('phc/referrals.html', current_user=user, center_id=center_id, referrals=referrals_list,
                            centers_list=centers_list, patients_list=patients_list, ambulances=ambulances,

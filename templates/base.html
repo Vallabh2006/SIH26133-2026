@@ -69,6 +69,25 @@
     </script>
     {% endif %}
 
+    <!-- Floating Rate Limit In-Page Badge -->
+    <div id="rate-limit-badge" class="rate-limit-floating-badge" style="display: none;" role="alert" aria-live="assertive">
+        <div class="rl-badge-card">
+            <div class="rl-badge-header">
+                <span class="rl-badge-pulse"></span>
+                <span class="rl-badge-icon">&#9203;</span>
+                <span class="rl-badge-title">Rate Limit Active</span>
+                <button type="button" class="rl-badge-close" onclick="dismissRateLimitBadge()" aria-label="Dismiss">&times;</button>
+            </div>
+            <div class="rl-badge-body">
+                <p class="rl-badge-desc" id="rate-limit-badge-desc">Maximum 15 requests per 30 seconds allowed.</p>
+                <div class="rl-timer-row">
+                    <span>Cooldown remaining:</span>
+                    <span id="rate-limit-countdown" class="rl-countdown-pill">30s</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 
@@ -76,6 +95,11 @@
     {% if messages %}
     <script>
         {% for category, message in messages %}
+        {% if "Rate limit" in message %}
+        if (typeof showRateLimitBadge === "function") {
+            showRateLimitBadge(30, {{ message|tojson }});
+        }
+        {% endif %}
         showToast({{ message|tojson }}, {{ category|tojson }});
         {% endfor %}
     </script>

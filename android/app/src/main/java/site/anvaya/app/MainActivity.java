@@ -148,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
         btnChangeUrl = findViewById(R.id.btnChangeUrl);
 
         swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(this, R.color.primary));
+        swipeRefreshLayout.setDistanceToTriggerSync(350);
         swipeRefreshLayout.setOnRefreshListener(() -> {
             if (isNetworkAvailable()) {
                 webView.reload();
@@ -155,6 +156,11 @@ public class MainActivity extends AppCompatActivity {
                 swipeRefreshLayout.setRefreshing(false);
                 Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        // Ensure SwipeRefreshLayout never intercepts touch when scrolling web content
+        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> {
+            return webView.canScrollVertically(-1) || webView.getScrollY() > 0;
         });
 
         btnRetry.setOnClickListener(v -> {
@@ -269,6 +275,16 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             cookieManager.setAcceptThirdPartyCookies(webView, true);
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            settings.setOffscreenPreRaster(true);
+        }
+
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                swipeRefreshLayout.setEnabled(scrollY == 0 && !webView.canScrollVertically(-1));
+            });
         }
 
         if (isNetworkAvailable()) {
@@ -380,6 +396,15 @@ public class MainActivity extends AppCompatActivity {
 
         public AndroidBridge(Context context) {
             this.context = context;
+        }
+
+        @JavascriptInterface
+        public void setSwipeRefreshEnabled(boolean enabled) {
+            runOnUiThread(() -> {
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setEnabled(enabled);
+                }
+            });
         }
 
         @JavascriptInterface

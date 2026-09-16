@@ -66,9 +66,9 @@
 
 html {
   font-size: 16px;
-  scroll-behavior: smooth;
   max-width: 100%;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -81,6 +81,8 @@ body {
   max-width: 100%;
   overflow-x: hidden;
   position: relative;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 a {
@@ -273,10 +275,12 @@ tbody tr:hover {
   top: 0;
   left: 0;
   bottom: 0;
+  height: 100vh;
+  max-height: 100vh;
   z-index: 200;
   transition: width var(--duration-slow) var(--ease), transform var(--duration-slow) var(--ease);
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .sidebar-backdrop {
@@ -323,6 +327,10 @@ tbody tr:hover {
   list-style: none;
   padding: var(--sp-3) 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .sidebar-section-title {
@@ -1679,6 +1687,8 @@ tbody tr:hover {
     top: 0;
     left: 0;
     bottom: 0;
+    height: 100vh;
+    max-height: 100vh;
     width: 280px;
     max-width: 85vw;
     z-index: 500;
@@ -1687,6 +1697,8 @@ tbody tr:hover {
     display: flex !important;
     flex-direction: column;
     box-shadow: none;
+    overflow: hidden !important;
+    overscroll-behavior: contain;
   }
 
   .sidebar.open {
@@ -1792,6 +1804,7 @@ tbody tr:hover {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
   }
 
   th,
@@ -1963,4 +1976,170 @@ input[type="submit"][disabled] {
   border-top-color: #ffffff;
   animation: spin 0.8s linear infinite;
   vertical-align: middle;
+}
+
+/* Custom In-Page Rate Limit Floating Badge */
+.rate-limit-floating-badge {
+  position: fixed;
+  top: var(--sp-5, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  pointer-events: auto;
+  animation: rlSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 92vw;
+  width: 390px;
+}
+
+@keyframes rlSlideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.rl-badge-card {
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(245, 158, 11, 0.4);
+  padding: 14px 18px;
+  backdrop-filter: blur(10px);
+  border-left: 4px solid #f59e0b;
+}
+
+.rl-badge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.rl-badge-pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  animation: rlPulse 1.5s infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.rl-badge-pulse.green {
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  animation: none;
+}
+
+@keyframes rlPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.rl-badge-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.rl-badge-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.rl-badge-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.rl-badge-close:hover {
+  color: #ffffff;
+}
+
+.rl-badge-body {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.rl-badge-desc {
+  margin: 0 0 8px;
+  line-height: 1.4;
+  color: #94a3b8;
+}
+
+.rl-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.rl-countdown-pill {
+  background: #f59e0b;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-family: ui-monospace, monospace;
+}
+
+/* Instant Navigation Progress Bar */
+#instant-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #6366f1);
+  z-index: 999999;
+  pointer-events: none;
+  transition: width 0.2s ease, opacity 0.3s ease;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.page-transitioning {
+  opacity: 0.88;
+  transition: opacity 0.12s ease-in-out;
+}
+
+/* Background Page Scroll Lock when Sidebar or Drawer is Open */
+html.sidebar-open,
+body.sidebar-open {
+  overflow: hidden !important;
+  height: 100% !important;
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
+.sidebar-backdrop {
+  touch-action: none;
+  overscroll-behavior: none;
 }

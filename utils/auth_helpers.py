@@ -1,17 +1,42 @@
-
-
+import time
 from functools import wraps
-from flask import session, redirect, url_for, abort, request, jsonify, g
+from flask import session, redirect, url_for, abort, request, jsonify, g, flash
 from utils.db import query_db
 
+_user_cache = {}
+USER_CACHE_TTL = 60
 
-def get_current_user():
-    if 'current_user' in g:
+
+def invalidate_user_cache(user_id=None):
+    if user_id:
+        _user_cache.pop(str(user_id), None)
+    else:
+        _user_cache.clear()
+
+
+def get_current_user(force_refresh=False):
+    if not force_refresh and 'current_user' in g:
         return g.current_user
+
     user_id = session.get('user_id')
     if not user_id:
         return None
+
+    str_uid = str(user_id)
+    now = time.time()
+
+    if not force_refresh and str_uid in _user_cache:
+        cached_user, expires_at = _user_cache[str_uid]
+        if now < expires_at:
+            g.current_user = cached_user
+            return cached_user
+
     user = query_db('SELECT * FROM users WHERE id = %s AND is_active = 1', (user_id,), one=True)
+    if user:
+        _user_cache[str_uid] = (user, now + USER_CACHE_TTL)
+    else:
+        _user_cache.pop(str_uid, None)
+
     g.current_user = user
     return user
 
@@ -36,8 +61,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
-from flask import flash
 
 def role_required(*roles):
     def decorator(f):

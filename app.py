@@ -115,6 +115,10 @@ def create_app(config_name=None):
 
     @app.before_request
     def check_testing_and_session():
+        from utils.rate_limiter import check_custom_rate_limit
+        rl_resp = check_custom_rate_limit()
+        if rl_resp:
+            return rl_resp
         g.request_start_time = time.time()
         if app.config.get("TESTING"):
             app.config["WTF_CSRF_ENABLED"] = False
@@ -123,8 +127,9 @@ def create_app(config_name=None):
     def validate_user_session_logic():
         if session and 'user_id' in session and 'session_version' in session:
             try:
-                row = query_db('SELECT session_version, is_active FROM users WHERE id = %s', (session['user_id'],), one=True)
-                if not row or not row.get('is_active') or row.get('session_version', 1) != session.get('session_version'):
+                from utils.auth_helpers import get_current_user
+                user = get_current_user()
+                if not user or not user.get('is_active') or user.get('session_version', 1) != session.get('session_version'):
                     session.clear()
                     flash('Your session has expired or was invalidated. Please log in again.', 'warning')
                     return redirect(url_for('auth.login'))
@@ -152,7 +157,7 @@ def create_app(config_name=None):
         if request.path.startswith("/static/"):
             response.headers["Cache-Control"] = "public, max-age=604800, immutable"
         elif response.status_code == 200 and not response.headers.get("Cache-Control"):
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Cache-Control"] = "private, no-cache, must-revalidate"
             response.headers["Pragma"] = "no-cache"
 
         try:
@@ -645,14 +650,28 @@ def create_app(config_name=None):
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        from utils.audit import log_audit
-        client_ip = request.remote_addr or "-"
+        from utils.security import get_client_ip
+        client_ip = get_client_ip()
         logger.warning("Rate limit triggered: ip=%s, path=%s, desc=%s", client_ip, request.path, str(e.description))
-        log_audit("rate_limit_exceeded", "ip", client_ip, {"description": str(e.description)})
-        if request.path.startswith("/api/") or request.is_json:
-            return jsonify({"error": "Rate limit exceeded", "message": str(e.description)}), 429
-        flash("Too many requests. Please slow down and try again in a moment.", "error")
-        return render_template("errors/429.html"), 429
+        desc = str(e.description) if hasattr(e, "description") else "Maximum 15 requests per 30 seconds."
+        is_ajax = (
+            request.path.startswith("/api/")
+            or request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            return jsonify({
+                "status": "error",
+                "rate_limited": True,
+                "error": "Rate limit exceeded",
+                "message": desc,
+                "retry_after": 30
+            }), 429
+        flash("Rate limit reached: Maximum 15 requests per 30 seconds. Please wait before trying again.", "warning")
+        if request.referrer and request.referrer != request.url:
+            return redirect(request.referrer)
+        return render_template("errors/429.html", retry_after=30), 429
 
     @app.errorhandler(404)
     def not_found(e):
