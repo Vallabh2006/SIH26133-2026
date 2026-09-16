@@ -1,0 +1,34 @@
+{% extends "shell.html" %}
+{% block page_title %}PHC Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>PHC Center Dashboard</h1>
+    <p class="text-muted">Manage facilities, inventory, and patient records.</p>
+</div>
+
+<div class="cards" style="margin-bottom: var(--sp-8);">
+    <a href="/facilities" class="card" style="text-decoration: none; color: inherit;">
+
+        <div class="card-label">Facilities Directory</div>
+        <p style="font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-2);">View and manage all connected health centers.</p>
+    </a>
+
+    <a href="/phc/prescriptions" class="card" style="text-decoration: none; color: inherit;">
+
+        <div class="card-label">Prescriptions</div>
+        <p style="font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-2);">Manage active patient prescriptions.</p>
+    </a>
+
+    <a href="/patient/" class="card" style="text-decoration: none; color: inherit;">
+
+        <div class="card-label">Medical Records</div>
+        <p style="font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-2);">Search patient records and histories.</p>
+    </a>
+
+    <a href="/phc/inventory" class="card" style="text-decoration: none; color: inherit;">
+
+        <div class="card-label">Inventory Access</div>
+        <p style="font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-2);">Check and update medical supplies and equipment.</p>
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,363 @@
+{% extends "shell.html" %}
+{% block page_title %}Patient Consultation & e-Prescriptions{% endblock %}
+{% block sidebar_nav %}{% include "phc/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Clinical Consultation & e-Prescriptions</h1>
+        <p class="text-muted">Unified clinical encounter workstation: Record examinations, vitals, diagnosis, and issue electronic prescriptions</p>
+    </div>
+    <div>
+        <a href="/phc/queue" class="btn outline"><- Back to Queue</a>
+    </div>
+</div>
+
+{% if patient %}
+
+<div class="panel" style="background: var(--sky); border: 1px solid rgba(20,121,169,0.2); margin-bottom: var(--sp-6);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-3);">
+        <div>
+            <h2 style="margin: 0 0 4px; color: var(--navy); font-size: 1.3rem;">{{ patient.full_name }}</h2>
+            <div style="display: flex; gap: var(--sp-3); font-size: var(--fs-xs); color: var(--ink); flex-wrap: wrap;">
+                <span>ID: <strong>{{ patient.id }}</strong></span>
+                <span>-</span>
+                <span>Age: <strong>{{ patient.dob | age }}</strong></span>
+                <span>-</span>
+                <span>Gender: <strong>{{ patient.gender }}</strong></span>
+                <span>-</span>
+                <span>Blood Group: <strong style="color: var(--navy);">{{ patient.blood_group or 'O+' }}</strong></span>
+                <span>-</span>
+                <span>Contact: <strong>{{ patient.phone or 'N/A' }}</strong></span>
+            </div>
+        </div>
+        <div>
+            <a href="/patient/{{ patient.id }}" class="btn sm outline" target="_blank">View Full EHR Profile -></a>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--sp-6);">
+
+    <div class="panel">
+        <h3 style="margin-bottom: var(--sp-4); color: var(--navy); display: flex; align-items: center; gap: 8px;">
+            New Clinical Encounter & Rx
+        </h3>
+
+        <form id="consultation-form" onsubmit="submitConsultation(event)">
+            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+
+            <div class="field">
+                <label>Chief Complaint & Symptoms *</label>
+                <textarea name="symptoms" rows="3" required placeholder="e.g. High fever for 3 days, dry cough, throat irritation, mild breathlessness"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+                <div class="field">
+                    <label>Blood Pressure (BP)</label>
+                    <input type="text" name="bp" placeholder="e.g. 120/80 mmHg">
+                </div>
+                <div class="field">
+                    <label>Pulse / Heart Rate</label>
+                    <input type="text" name="pulse" placeholder="e.g. 72 bpm">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+                <div class="field">
+                    <label>SpO2 (%)</label>
+                    <input type="text" name="spo2" placeholder="e.g. 98%">
+                </div>
+                <div class="field">
+                    <label>Temperature (°F)</label>
+                    <input type="text" name="temperature" placeholder="e.g. 98.6 °F">
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Clinical Diagnosis & Examination Notes *</label>
+                <textarea name="diagnosis" rows="3" required placeholder="Detailed clinical examination findings, physical checkup notes, and provisional diagnosis"></textarea>
+            </div>
+
+            <div style="background: var(--bg); padding: var(--sp-4); border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: var(--sp-4);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                    <label style="margin: 0; color: var(--navy); font-weight: 700; font-size: var(--fs-sm);">
+                         Electronic Prescription (e-Rx)
+                    </label>
+                    <span style="font-size: 11px; color: var(--muted);">Auto-synchronized with pharmacy</span>
+                </div>
+
+                <p style="font-size: 11px; color: var(--muted); margin: 0 0 var(--sp-3);">
+                    Enter prescribed medicines with dosages and durations (separated by commas or new lines):
+                </p>
+
+                <textarea name="medications" id="medications-input" rows="3" placeholder="e.g.&#10;Tab Paracetamol 650mg (1-1-1 for 3 days)&#10;Tab Amoxicillin 500mg (1-0-1 after food)&#10;Syp Cough Relief 10ml (twice daily)" style="font-family: inherit; font-size: var(--fs-xs);"></textarea>
+
+                <div style="margin-top: var(--sp-2); display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                    <span style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600;">Quick Add:</span>
+                    <button type="button" onclick="addMedication('Tab Paracetamol 650mg (1-0-1)')" class="btn sm outline" style="padding: 2px 6px; font-size: 10px; height: auto;">+ Paracetamol</button>
+                    <button type="button" onclick="addMedication('Tab Cetirizine 10mg (0-0-1)')" class="btn sm outline" style="padding: 2px 6px; font-size: 10px; height: auto;">+ Cetirizine</button>
+                    <button type="button" onclick="addMedication('Tab Amoxicillin 500mg (1-0-1)')" class="btn sm outline" style="padding: 2px 6px; font-size: 10px; height: auto;">+ Amoxicillin</button>
+                    <button type="button" onclick="addMedication('ORS Sachet 1 packet in 1L water')" class="btn sm outline" style="padding: 2px 6px; font-size: 10px; height: auto;">+ ORS</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: var(--sp-3); margin-top: var(--sp-4);">
+                <button type="submit" id="save-btn" class="btn lg" style="background: var(--blue); color: #fff; font-weight: 600;">
+                     Save Consultation & Issue Rx
+                </button>
+                <a href="/phc/queue" class="btn lg outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+
+        <div style="display: flex; border-bottom: 2px solid var(--line); margin-bottom: var(--sp-4); gap: var(--sp-2);">
+            <button type="button" id="tab-records-btn" onclick="switchTab('records')" style="background: none; border: none; padding: 8px 12px; font-weight: 700; font-size: var(--fs-sm); color: var(--blue); border-bottom: 2px solid var(--blue); cursor: pointer; margin-bottom: -2px;">
+                 Clinical Notes (<span id="records-count">{{ records|length }}</span>)
+            </button>
+            <button type="button" id="tab-rx-btn" onclick="switchTab('rx')" style="background: none; border: none; padding: 8px 12px; font-weight: 600; font-size: var(--fs-sm); color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -2px;">
+                 Prescriptions (<span id="rx-count">{{ prescriptions|length }}</span>)
+            </button>
+        </div>
+
+        <div id="tab-records-content" style="display: flex; flex-direction: column; gap: var(--sp-3); max-height: 540px; overflow-y: auto;">
+        {% if records %}
+            {% for r in records %}
+                <div class="history-item" style="padding: var(--sp-3); border-radius: var(--radius); background: var(--bg); border: 1px solid var(--line);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ r.title }}</strong>
+                        <span style="font-size: var(--fs-xs); color: var(--muted);">{{ r.created_at.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    {% if r.data_parsed and r.data_parsed.symptoms %}
+                        <p style="font-size: var(--fs-xs); color: var(--ink); margin: 0 0 2px;">
+                            <strong>Complaints:</strong> {{ r.data_parsed.symptoms }}
+                        </p>
+                    {% endif %}
+                    {% if r.data_parsed and r.data_parsed.notes %}
+                        <p style="font-size: var(--fs-xs); color: var(--ink); margin: 0 0 4px;">
+                            <strong>Diagnosis:</strong> {{ r.data_parsed.notes }}
+                        </p>
+                    {% endif %}
+                    {% if r.data_parsed and r.data_parsed.vitals %}
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                            {% for vk, vv in r.data_parsed.vitals.items() %}
+                                {% if vv %}
+                                <span style="background: var(--white); border: 1px solid var(--line); padding: 2px 6px; border-radius: 4px; font-size: 10px;">
+                                    <strong>{{ vk }}:</strong> {{ vv }}
+                                </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div id="empty-records" class="empty-state" style="padding: var(--sp-6) 0;">
+
+                <p style="font-size: var(--fs-xs); color: var(--muted);">No prior clinical records for this patient.</p>
+            </div>
+        {% endif %}
+        </div>
+
+        <div id="tab-rx-content" style="display: none; flex-direction: column; gap: var(--sp-3); max-height: 540px; overflow-y: auto;">
+        {% if prescriptions %}
+            {% for rx in prescriptions %}
+                <div class="rx-item" style="padding: var(--sp-3); border-radius: var(--radius); background: var(--bg); border: 1px solid var(--line); border-left: 4px solid var(--blue);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">Rx #{{ rx.id }}</strong>
+                        <span style="font-size: var(--fs-xs); color: var(--muted);">{{ rx.created_at.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">
+                        Prescribed by: <strong>{{ rx.doctor_name or 'Medical Officer' }}</strong>
+                    </div>
+                    {% if rx.medicines_parsed %}
+                        <div style="background: var(--white); padding: 6px 10px; border-radius: 4px; border: 1px solid var(--line);">
+                            <ul style="margin: 0; padding-left: var(--sp-3); font-size: var(--fs-xs); color: var(--ink);">
+                            {% for med in rx.medicines_parsed %}
+                                <li><strong>{{ med.name }}</strong> {% if med.dosage %}- {{ med.dosage }}{% endif %}</li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div id="empty-rx" class="empty-state" style="padding: var(--sp-6) 0;">
+
+                <p style="font-size: var(--fs-xs); color: var(--muted);">No digital prescriptions on file for this patient.</p>
+            </div>
+        {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    const recBtn = document.getElementById('tab-records-btn');
+    const rxBtn = document.getElementById('tab-rx-btn');
+    const recContent = document.getElementById('tab-records-content');
+    const rxContent = document.getElementById('tab-rx-content');
+
+    if (tab === 'records') {
+        recBtn.style.color = 'var(--blue)';
+        recBtn.style.borderBottomColor = 'var(--blue)';
+        rxBtn.style.color = 'var(--muted)';
+        rxBtn.style.borderBottomColor = 'transparent';
+        recContent.style.display = 'flex';
+        rxContent.style.display = 'none';
+    } else {
+        rxBtn.style.color = 'var(--blue)';
+        rxBtn.style.borderBottomColor = 'var(--blue)';
+        recBtn.style.color = 'var(--muted)';
+        recBtn.style.borderBottomColor = 'transparent';
+        rxContent.style.display = 'flex';
+        recContent.style.display = 'none';
+    }
+}
+
+function addMedication(med) {
+    const input = document.getElementById('medications-input');
+    if (input.value.trim().length > 0) {
+        input.value += "\n" + med;
+    } else {
+        input.value = med;
+    }
+}
+
+async function submitConsultation(event) {
+    event.preventDefault();
+    const form = document.getElementById('consultation-form');
+    const btn = document.getElementById('save-btn');
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    btn.disabled = true;
+    btn.innerText = "Saving Consultation & Rx...";
+
+    try {
+        const response = await fetch('/phc/consultation/' + encodeURIComponent(data.patient_id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok && result.ok) {
+            showToast(result.message || 'Consultation and e-Prescription saved successfully!', 'success');
+
+            // Clear input fields
+            form.reset();
+
+            // 1. Add new record to Clinical Notes tab
+            const emptyRecords = document.getElementById('empty-records');
+            if (emptyRecords) emptyRecords.remove();
+
+            const recContainer = document.getElementById('tab-records-content');
+            const newRecCard = document.createElement('div');
+            newRecCard.className = 'history-item';
+            newRecCard.style = 'padding: var(--sp-3); border-radius: var(--radius); background: var(--bg); border: 1px solid var(--line);';
+
+            let vitalsHtml = '';
+            if (result.record && result.record.vitals) {
+                for (const [k, v] of Object.entries(result.record.vitals)) {
+                    if (v) {
+                        vitalsHtml += `<span style="background: var(--white); border: 1px solid var(--line); padding: 2px 6px; border-radius: 4px; font-size: 10px;"><strong>${k}:</strong> ${v}</span> `;
+                    }
+                }
+            }
+
+            newRecCard.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <strong style="color: var(--navy); font-size: var(--fs-sm);">${result.record ? result.record.title : 'Consultation'}</strong>
+                    <span style="font-size: var(--fs-xs); color: var(--muted);">${result.record ? result.record.created_at : 'Just now'}</span>
+                </div>
+                ${result.record && result.record.symptoms ? `<p style="font-size: var(--fs-xs); color: var(--ink); margin: 0 0 2px;"><strong>Complaints:</strong> ${result.record.symptoms}</p>` : ''}
+                <p style="font-size: var(--fs-xs); color: var(--ink); margin: 0 0 4px;"><strong>Diagnosis:</strong> ${result.record ? result.record.notes : ''}</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">${vitalsHtml}</div>
+            `;
+            recContainer.insertBefore(newRecCard, recContainer.firstChild);
+
+            const recCount = document.getElementById('records-count');
+            if (recCount) recCount.innerText = parseInt(recCount.innerText || '0') + 1;
+
+            // 2. Add new Rx to Prescriptions tab if medications were entered
+            if (result.record && result.record.medicines && result.record.medicines.length > 0) {
+                const emptyRx = document.getElementById('empty-rx');
+                if (emptyRx) emptyRx.remove();
+
+                const rxContainer = document.getElementById('tab-rx-content');
+                const newRxCard = document.createElement('div');
+                newRxCard.className = 'rx-item';
+                newRxCard.style = 'padding: var(--sp-3); border-radius: var(--radius); background: var(--bg); border: 1px solid var(--line); border-left: 4px solid var(--blue);';
+
+                let medsListHtml = '';
+                result.record.medicines.forEach(m => {
+                    medsListHtml += `<li><strong>${m.name}</strong> - ${m.dosage || 'As directed'}</li>`;
+                });
+
+                newRxCard.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">Rx #${result.rx_id || 'New'}</strong>
+                        <span style="font-size: var(--fs-xs); color: var(--muted);">${result.record.created_at}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">
+                        Prescribed by: <strong>Attending Medical Officer</strong>
+                    </div>
+                    <div style="background: var(--white); padding: 6px 10px; border-radius: 4px; border: 1px solid var(--line);">
+                        <ul style="margin: 0; padding-left: var(--sp-3); font-size: var(--fs-xs); color: var(--ink);">
+                            ${medsListHtml}
+                        </ul>
+                    </div>
+                `;
+                rxContainer.insertBefore(newRxCard, rxContainer.firstChild);
+
+                const rxCount = document.getElementById('rx-count');
+                if (rxCount) rxCount.innerText = parseInt(rxCount.innerText || '0') + 1;
+            }
+        } else {
+            showToast(result.error || 'Failed to save consultation. Please try again.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('An error occurred while saving consultation & prescription.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = " Save Consultation & Issue Rx";
+    }
+}
+</script>
+
+{% else %}
+
+<div class="panel" style="padding: var(--sp-8); text-align: center;">
+
+    <h2 style="color: var(--navy); margin-bottom: var(--sp-2);">Select a Patient to Begin Consultation & e-Prescription</h2>
+    <p style="color: var(--muted); font-size: var(--fs-sm); max-width: 520px; margin: 0 auto var(--sp-6);">
+        Select a patient from today's OPD waiting queue or choose from registered patients below.
+    </p>
+
+    <div style="max-width: 650px; margin: 0 auto;">
+        <h4 style="text-align: left; margin-bottom: var(--sp-2); color: var(--navy);">Registered Patients Directory:</h4>
+        <div style="display: flex; flex-direction: column; gap: var(--sp-2); text-align: left;">
+            {% for p in patients_list %}
+                <div style="padding: var(--sp-3); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--navy);">{{ p.full_name }}</strong>
+                        <span style="font-size: var(--fs-xs); color: var(--muted); margin-left: 8px;">ID: {{ p.id }} - {{ p.gender }} - Blood: {{ p.blood_group or 'O+' }}</span>
+                    </div>
+                    <a href="/phc/consultation/{{ p.id }}" class="btn sm" style="background: var(--blue); color: #fff;">
+                        Select & Consult ->
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

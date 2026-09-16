@@ -1,0 +1,319 @@
+{% extends "shell.html" %}
+{% block page_title %}Action Permission & Access Control - Master Admin{% endblock %}
+{% block sidebar_nav %}{% include "admin/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: var(--sp-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-4);">
+    <div>
+        <h1 style="margin: 0 0 4px; font-size: var(--fs-xl); color: var(--navy); font-weight: 700;">Action Permissions & Access Control</h1>
+        <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">
+            Configure granular web application actions (records, consultations, inventory, user onboarding, audits) for each role
+        </p>
+    </div>
+    <div style="display: flex; gap: var(--sp-2); align-items: center;">
+        <span style="background: #fee2e2; color: #dc2626; padding: 6px 14px; border-radius: 20px; font-size: var(--fs-xs); font-weight: 700; border: 1px solid rgba(220, 38, 38, 0.2);">
+            Master Admin Authorization
+        </span>
+    </div>
+</div>
+
+<div class="cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+    <div class="card" style="border-left: 4px solid #dc2626;">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Master Admins</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #dc2626;">{{ role_counts.get('system_admin', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Universal governance</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #b45309;">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Facility Admins</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #b45309;">{{ role_counts.get('region_admin', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Center managers</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #0284c7;">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Medical Officers</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #0284c7;">{{ role_counts.get('doctor', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Doctors & physicians</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #16a34a;">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Healthcare Staff</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #16a34a;">{{ role_counts.get('nurse', 0) + role_counts.get('pharmacist', 0) + role_counts.get('lab_technician', 0) + role_counts.get('ambulance_op', 0) + role_counts.get('receptionist', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Nurses, pharmacy, labs</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #2563eb;">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Patients</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #2563eb;">{{ role_counts.get('patient', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Registered portal users</div>
+    </div>
+</div>
+
+<form method="POST" action="/admin/permissions/save-matrix" class="panel" style="margin-bottom: var(--sp-6); padding: var(--sp-6);">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); flex-wrap: wrap; gap: var(--sp-3); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-4);">
+        <div>
+            <h3 style="margin: 0 0 4px; color: var(--navy); font-size: var(--fs-md); font-weight: 700;">
+                Live Role Action Permission Matrix
+            </h3>
+            <p style="margin: 0; font-size: var(--fs-xs); color: var(--muted);">
+                Check or uncheck permissions to grant or revoke specific web capabilities for each platform role in real time
+            </p>
+        </div>
+        <div>
+            <button type="submit" class="btn" style="background: var(--blue); color: #fff; font-weight: 700; padding: 10px 20px;">
+                Save & Deploy Permission Matrix
+            </button>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
+            <thead>
+                <tr style="background: var(--bg); border-bottom: 2px solid var(--line);">
+                    <th style="text-align: left; padding: var(--sp-3); font-size: var(--fs-xs); color: var(--navy); width: 280px;">Web Application Action</th>
+                    {% for r_tuple in all_roles %}
+                    <th style="text-align: center; padding: var(--sp-3); font-size: 11px; color: var(--navy); white-space: nowrap;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ r_tuple[2] }}; margin-right: 4px;"></span>
+                        {{ r_tuple[1] }}<br>
+                        <span style="font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight: normal;">({{ r_tuple[0] }})</span>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% set categories = ['Clinical Operations', 'Supply & Pharmacy', 'Patient Flow', 'Administration', 'Governance'] %}
+                {% for cat in categories %}
+                    <tr style="background: rgba(20, 121, 169, 0.05);">
+                        <td colspan="{{ all_roles|length + 1 }}" style="padding: 8px var(--sp-3); font-size: var(--fs-xs); font-weight: 700; color: var(--navy); letter-spacing: 0.05em; text-transform: uppercase; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+                            {{ cat }}
+                        </td>
+                    </tr>
+                    {% for act in system_actions %}
+                        {% if act.category == cat %}
+                        <tr style="border-bottom: 1px solid var(--line); transition: background 0.15s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: var(--sp-3);">
+                                <strong style="color: var(--navy); font-size: var(--fs-sm); display: block;">{{ act.name }}</strong>
+                                <span style="font-size: 11px; color: var(--muted); line-height: 1.4;">{{ act.description }}</span>
+                            </td>
+                            {% for r_tuple in all_roles %}
+                                {% set r_key = r_tuple[0] %}
+                                {% set is_checked = permissions_matrix.get(r_key, {}).get(act.key, false) %}
+                                <td style="padding: var(--sp-3); text-align: center; vertical-align: middle;">
+                                    {% if r_key == 'system_admin' %}
+                                        <input type="checkbox" checked disabled title="Master Administrator retains all action permissions" style="width: 18px; height: 18px; accent-color: #dc2626; cursor: not-allowed;">
+                                        <input type="hidden" name="perm_{{ r_key }}_{{ act.key }}" value="1">
+                                    {% else %}
+                                        <input type="checkbox" name="perm_{{ r_key }}_{{ act.key }}" value="1" {% if is_checked %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--blue); cursor: pointer;">
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: var(--sp-5); border-top: 1px solid var(--line); padding-top: var(--sp-4);">
+        <button type="submit" class="btn" style="background: var(--blue); color: #fff; font-weight: 700; padding: 10px 24px;">
+            Save & Deploy Permission Matrix
+        </button>
+    </div>
+</form>
+
+<div class="panel" style="margin-bottom: var(--sp-6);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md); font-weight: 700;">
+            User Account Role & Center Assignments ({{ users|length }})
+        </h3>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Direct user promotion & facility reassignment</span>
+    </div>
+
+    <form method="GET" action="/admin/permissions" style="display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; margin-bottom: var(--sp-4);">
+        <div style="flex: 1; min-width: 160px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">Filter by Role</label>
+            <select name="role" style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+                <option value="all">All Roles</option>
+                {% for r_tuple in all_roles %}
+                    <option value="{{ r_tuple[0] }}" {% if role_filter == r_tuple[0] %}selected{% endif %}>{{ r_tuple[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex: 1.2; min-width: 180px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">Filter by Facility</label>
+            <select name="center_id" style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+                <option value="all">All Health Centers</option>
+                {% for c in centers %}
+                    <option value="{{ c.id }}" {% if center_filter == c.id %}selected{% endif %}>{{ c.name }} ({{ c.id }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex: 1.5; min-width: 200px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">Search User</label>
+            <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, username, email..." style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+        </div>
+
+        <div>
+            <button type="submit" class="btn sm" style="height: 38px;">Filter</button>
+            <a href="/admin/permissions" class="btn sm outline" style="height: 38px;">Reset</a>
+        </div>
+    </form>
+
+    {% if users %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--bg); border-bottom: 2px solid var(--line);">
+                    <th style="text-align: left; padding: var(--sp-3); font-size: var(--fs-xs);">User Account</th>
+                    <th style="text-align: left; padding: var(--sp-3); font-size: var(--fs-xs);">Role</th>
+                    <th style="text-align: left; padding: var(--sp-3); font-size: var(--fs-xs);">Assigned Facility</th>
+                    <th style="text-align: left; padding: var(--sp-3); font-size: var(--fs-xs);">Status</th>
+                    <th style="text-align: right; padding: var(--sp-3); font-size: var(--fs-xs);">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: var(--sp-3);">
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ u.full_name }}</strong><br>
+                        <span style="font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono);">@{{ u.username }} ({{ u.email or 'No email' }})</span>
+                    </td>
+                    <td style="padding: var(--sp-3);">
+                        {% set r_meta = role_matrix.get(u.role, {}) %}
+                        <span style="background: {{ r_meta.get('badge_color', '#64748b') }}15; color: {{ r_meta.get('badge_color', '#64748b') }}; border: 1px solid {{ r_meta.get('badge_color', '#64748b') }}40; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">
+                            {{ r_meta.get('title', u.role | upper) }}
+                        </span>
+                    </td>
+                    <td style="padding: var(--sp-3); font-size: var(--fs-xs);">
+                        {% if u.facility_name %}
+                            <strong style="color: var(--navy);">{{ u.facility_name }}</strong><br>
+                            <span style="color: var(--muted); font-family: var(--mono);">{{ u.center_id }}</span>
+                        {% elif u.center_id %}
+                            <strong style="color: var(--navy);">{{ u.center_id }}</strong>
+                        {% else %}
+                            <span style="color: var(--muted); font-style: italic;">Global Headquarters</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); font-size: var(--fs-xs);">
+                        {% if u.is_active %}
+                            <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 10px; font-weight: 600;">Active</span>
+                        {% else %}
+                            <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 10px; font-weight: 600;">Suspended</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); text-align: right;">
+                        <div style="display: inline-flex; gap: 6px;">
+                            <button type="button" class="btn sm edit-perm-btn" style="background: var(--navy); color: #fff; font-size: 11px; padding: 4px 10px;"
+                                    data-user-id="{{ u.id }}"
+                                    data-username="{{ u.username }}"
+                                    data-fullname="{{ u.full_name | e }}"
+                                    data-role="{{ u.role }}"
+                                    data-center-id="{{ u.center_id or '' }}"
+                                    data-designation="{{ u.designation or '' }}">
+                                Change Role / Center
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty-state" style="padding: var(--sp-6) 0; text-align: center;">
+            <h3 style="color: var(--navy);">No Accounts Found</h3>
+            <p style="font-size: var(--fs-xs); color: var(--muted);">No user accounts matched the filter query.</p>
+        </div>
+    {% endif %}
+</div>
+
+<div id="perm-modal" class="modal">
+    <div class="modal-dialog" style="background: var(--white); border-radius: var(--radius-xl); max-width: 520px; width: 100%; box-shadow: var(--shadow-xl); border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column;">
+        <div style="padding: var(--sp-4) var(--sp-6); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md); font-weight: 700;">Modify Account Role & Center</h3>
+                <p style="margin: 2px 0 0; font-size: 11px; color: var(--muted);" id="modal-user-subtitle">User: @username</p>
+            </div>
+            <button type="button" onclick="closeEditPermissionModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--muted);">&times;</button>
+        </div>
+
+        <form method="POST" id="perm-edit-form" style="background: var(--white); padding: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); max-height: 80vh; overflow-y: auto;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Assigned Platform Role <span style="color: var(--red);">*</span></label>
+                <select name="role" id="modal-role-select" required style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white);">
+                    {% for r_tuple in all_roles %}
+                        <option value="{{ r_tuple[0] }}">{{ r_tuple[1] }} ({{ r_tuple[0] }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Assigned Health Center / Facility</label>
+                <select name="center_id" id="modal-center-select" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white);">
+                    <option value="">None / Global Headquarters</option>
+                    {% for c in centers %}
+                        <option value="{{ c.id }}">{{ c.name }} ({{ c.id }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Official Designation</label>
+                <input type="text" name="designation" id="modal-designation-input" placeholder="e.g. Senior Medical Officer" style="width: 100%; height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm);">
+            </div>
+
+            <div style="background: var(--sky); border-radius: var(--radius); padding: 10px 14px; font-size: var(--fs-xs); color: var(--navy); line-height: 1.5;">
+                Updating this account's role immediately adjusts their action grants according to the live Role Action Permission Matrix above.
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-2);">
+                <button type="button" onclick="closeEditPermissionModal()" class="btn outline" style="height: 38px;">Cancel</button>
+                <button type="submit" class="btn" style="background: var(--blue); color: #fff; height: 38px;">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditPermissionModal(userId, username, fullName, role, centerId, designation) {
+    const form = document.getElementById('perm-edit-form');
+    const subtitle = document.getElementById('modal-user-subtitle');
+    const roleSelect = document.getElementById('modal-role-select');
+    const centerSelect = document.getElementById('modal-center-select');
+    const designationInput = document.getElementById('modal-designation-input');
+
+    if (form) form.action = '/admin/permissions/update-role/' + userId;
+    if (subtitle) subtitle.textContent = fullName + ' (@' + username + ' - ID #' + userId + ')';
+    if (roleSelect) roleSelect.value = role;
+    if (centerSelect) centerSelect.value = centerId || '';
+    if (designationInput) designationInput.value = designation || '';
+
+    openModal('perm-modal');
+}
+
+function closeEditPermissionModal() {
+    closeModal('perm-modal');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.edit-perm-btn');
+        if (!btn) return;
+        openEditPermissionModal(
+            btn.getAttribute('data-user-id'),
+            btn.getAttribute('data-username'),
+            btn.getAttribute('data-fullname'),
+            btn.getAttribute('data-role'),
+            btn.getAttribute('data-center-id'),
+            btn.getAttribute('data-designation')
+        );
+    });
+});
+</script>
+{% endblock %}

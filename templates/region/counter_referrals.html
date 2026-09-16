@@ -1,0 +1,56 @@
+{% extends "shell.html" %}
+{% block page_title %}Regional Counter-Referrals{% endblock %}
+{% block sidebar_nav %}{% include "region/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: var(--sp-6) 0;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-4);">
+        <div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin: 0 0 4px;">
+                Specialist Counter-Referral Guidance
+            </h1>
+            <p style="color: var(--muted); font-size: var(--fs-sm); margin: 0;">
+                Clinical guidance and step-down management instructions returned from district hospitals back to originating Primary Health Centres.
+            </p>
+        </div>
+    </div>
+
+    <div class="card panel" style="background: var(--white); border-radius: 12px; border: 1px solid var(--line); padding: var(--sp-6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy); margin: 0;">
+                Counter-Referred Cases & Step-down Care
+            </h2>
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600;">{{ counter_referrals|length }} active protocols</span>
+        </div>
+
+        {% if counter_referrals and counter_referrals|length > 0 %}
+        <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+            {% for cr in counter_referrals %}
+            <div class="card" style="padding: var(--sp-4); background: var(--bg-surface); border-radius: 10px; border: 1px solid var(--line);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                    <div style="font-weight: 800; color: var(--navy); font-size: 1.05rem;">
+                        REF-{{ cr.id }}: {{ cr.patient_name }}
+                    </div>
+                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; padding: 4px 10px; border-radius: 12px;">
+                        Counter-Referred
+                    </span>
+                </div>
+                <div style="font-size: var(--fs-xs); color: var(--muted); margin-bottom: var(--sp-3);">
+                    Specialist Hospital: <strong>{{ cr.specialist_center_name or cr.to_center }}</strong> &rarr; Origin PHC: <strong>{{ cr.phc_center_name or cr.from_center }}</strong>
+                </div>
+                <div style="background: #fff; border-radius: 8px; border: 1px solid var(--line); padding: 12px; font-size: var(--fs-sm); color: var(--navy); line-height: 1.6; white-space: pre-line;">
+                    {{ cr.notes or 'Specialist review completed. Step-down medication and follow-up care advised at primary center.' }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--sp-8); color: var(--muted);">
+            <h3>No counter-referral protocols currently registered.</h3>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

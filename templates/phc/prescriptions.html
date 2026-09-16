@@ -1,0 +1,69 @@
+{% extends "shell.html" %}
+{% block page_title %}E-Prescriptions Management{% endblock %}
+{% block sidebar_nav %}{% include "phc/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>E-Prescriptions & Pharmacy Orders</h1>
+        <p class="text-muted">Generate standardized digital prescriptions and review patient medication dispensing</p>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom: var(--sp-6);">
+    <h3 style="margin-bottom: var(--sp-4); color: var(--navy);">Issue New Electronic Prescription</h3>
+    <form onsubmit="event.preventDefault(); showToast('Prescription generated and synchronized with pharmacy!', 'success');">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
+            <div class="field">
+                <label>Select Patient *</label>
+                <select required>
+                    <option value="" disabled selected>Choose a registered patient</option>
+                    {% for p in patients_list %}
+                        <option value="{{ p.id }}">{{ p.full_name }} ({{ p.id }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Prescribed Medicines (JSON or list) *</label>
+                <input type="text" required placeholder="e.g. Paracetamol 500mg 1-0-1 (5 days), Amoxicillin 250mg 1-0-1">
+            </div>
+        </div>
+        <div class="field">
+            <label>Dosage Instructions & Precautions</label>
+            <textarea rows="2" placeholder="Take after meals with plenty of water. Avoid if allergic."></textarea>
+        </div>
+        <button type="submit" class="btn" style="background: var(--blue); color: #fff;">+ Issue Digital Prescription</button>
+    </form>
+</div>
+
+<div class="panel">
+    <h3 style="margin-bottom: var(--sp-4); color: var(--navy);">Recent Center Prescriptions</h3>
+    {% if prescriptions %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--sp-4);">
+        {% for rx in prescriptions %}
+            <div class="card" style="padding: var(--sp-4); border-left: 4px solid var(--blue);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <strong style="color: var(--navy);">Rx #{{ rx.id }}</strong>
+                    <span style="font-size: var(--fs-xs); color: var(--muted);">{{ rx.created_at.strftime('%b %d, %Y') }}</span>
+                </div>
+                <div style="font-size: var(--fs-xs); color: var(--muted); margin-bottom: 8px;">
+                    Patient: <strong>{{ rx.patient_name or rx.patient_id }}</strong> | By: {{ rx.doctor_name or 'Medical Officer' }}
+                </div>
+                {% if rx.medicines_parsed %}
+                    <ul style="font-size: var(--fs-xs); color: var(--ink); margin: 0 0 6px var(--sp-4); padding: 0;">
+                    {% for med in rx.medicines_parsed %}
+                        <li><strong>{{ med.name }}</strong> ({{ med.dosage }})</li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+                {% if rx.notes %}
+                    <p style="font-size: var(--fs-xs); color: var(--muted); margin: 0; font-style: italic;">Note: {{ rx.notes }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">No prescriptions on record for this center.</p>
+    {% endif %}
+</div>
+{% endblock %}

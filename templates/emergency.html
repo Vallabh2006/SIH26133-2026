@@ -1,0 +1,80 @@
+{% extends "shell.html" %}
+{% block page_title %}Emergency Healthcare Services{% endblock %}
+{% block sidebar_nav %}
+{% if current_user and current_user.role == 'patient' %}
+    {% include "patient/_nav.html" %}
+{% elif current_user and current_user.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist') %}
+    {% include "phc/_nav.html" %}
+{% elif current_user and current_user.role == 'region_admin' %}
+    {% include "region/_nav.html" %}
+{% elif current_user and current_user.role == 'system_admin' %}
+    {% include "admin/_nav.html" %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 style="color: var(--red);"> Emergency Medical Contacts</h1>
+        <p class="text-muted">Immediate contacts and assistance for medical emergencies</p>
+    </div>
+</div>
+
+<div class="cards" style="margin-bottom: var(--sp-6);">
+    <div class="card" style="border-left: 4px solid #ef4444;">
+
+        <div class="card-label">National Ambulance Helpline</div>
+        <div style="font-size: 2rem; font-weight: 700; color: #ef4444; margin: var(--sp-2) 0;">
+            <a href="tel:108" style="text-decoration: none; color: inherit;">108</a>
+        </div>
+        <p style="font-size: var(--fs-xs); color: var(--muted);">24/7 Emergency Ambulance, Police & Fire dispatch.</p>
+        <a href="tel:108" class="btn danger sm" style="margin-top: var(--sp-3); width: 100%; text-align: center; text-decoration: none;"> Call 108 Now</a>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #f59e0b;">
+
+        <div class="card-label">Maternal & Child Transport</div>
+        <div style="font-size: 2rem; font-weight: 700; color: #f59e0b; margin: var(--sp-2) 0;">
+            <a href="tel:102" style="text-decoration: none; color: inherit;">102</a>
+        </div>
+        <p style="font-size: var(--fs-xs); color: var(--muted);">Free transport for pregnant women and neonates.</p>
+        <a href="tel:102" class="btn sm" style="margin-top: var(--sp-3); width: 100%; text-align: center; text-decoration: none; background: #f59e0b; color: white;"> Call 102 Now</a>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #3b82f6;">
+
+        <div class="card-label">National Health Helpline / Advisory</div>
+        <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin: var(--sp-2) 0;">
+            <a href="tel:104" style="text-decoration: none; color: inherit;">104</a>
+        </div>
+        <p style="font-size: var(--fs-xs); color: var(--muted);">Doctor consultation, first aid advice & complaints.</p>
+        <a href="tel:104" class="btn outline sm" style="margin-top: var(--sp-3); width: 100%; text-align: center; text-decoration: none;"> Call 104 Helpline</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); margin-bottom: var(--sp-6);">
+    <div class="panel">
+        <h3 style="margin-bottom: var(--sp-3);"> Nearest Primary Health Centre</h3>
+        <p style="font-size: var(--fs-sm); color: var(--muted); margin-bottom: var(--sp-4);">
+            For walk-in emergencies and primary stabilization.
+        </p>
+        <div style="background: var(--bg); padding: var(--sp-4); border-radius: var(--radius); border: 1px solid var(--line);">
+            <div style="font-weight: 600; font-size: var(--fs-md); color: var(--navy); margin-bottom: 4px;">District Sub-District Hospital & PHC</div>
+            <p style="font-size: var(--fs-sm); color: var(--ink); margin-bottom: 8px;">Operating Hours: 24x7 Emergency Casualty</p>
+            <div style="display: flex; gap: var(--sp-2);">
+                <a href="/facilities" class="btn sm outline">View All Facilities</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3 style="margin-bottom: var(--sp-3);"> Essential First Aid Steps</h3>
+        <ul style="font-size: var(--fs-sm); color: var(--ink); padding-left: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2);">
+            <li><strong>Severe Bleeding:</strong> Apply firm, direct pressure with a clean cloth. Keep elevated.</li>
+            <li><strong>Unconscious / Fainting:</strong> Keep airway clear, place in recovery position on side.</li>
+            <li><strong>Snakebite:</strong> Keep victim still and calm. Do not cut or apply tourniquet. Rush to PHC immediately.</li>
+            <li><strong>Burns:</strong> Cool with clean running water for 15-20 minutes. Do not apply ice directly.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

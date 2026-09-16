@@ -1,0 +1,75 @@
+{% extends "shell.html" %}
+{% block page_title %}Regional Discharges & Outcomes{% endblock %}
+{% block sidebar_nav %}{% include "region/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: var(--sp-6) 0;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-4);">
+        <div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin: 0 0 4px;">
+                Patient Discharges & Clinical Outcomes
+            </h1>
+            <p style="color: var(--muted); font-size: var(--fs-sm); margin: 0;">
+                Log of completed consultations, stabilized transfers, and clinical follow-up schedules.
+            </p>
+        </div>
+    </div>
+
+    <div class="card panel" style="background: var(--white); border-radius: 12px; border: 1px solid var(--line); padding: var(--sp-6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy); margin: 0;">
+                Recent Clinical Discharges & Concluded Episodes
+            </h2>
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600;">{{ discharges|length }} records</span>
+        </div>
+
+        {% if discharges and discharges|length > 0 %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: var(--fs-sm);">
+                <thead>
+                    <tr style="background: var(--bg-surface); text-align: left; color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase;">
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Episode ID</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Patient Name</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Facility</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Department</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Consulting Physician</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Discharge Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in discharges %}
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px 14px; font-weight: 700; font-family: var(--mono); color: var(--navy);">
+                            #{{ d.token_number or d.id }}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <div style="font-weight: 600; color: var(--navy);">{{ d.patient_name }}</div>
+                            <small style="color: var(--muted);">{{ d.gender or '-' }}, {{ d.blood_group or '-' }}</small>
+                        </td>
+                        <td style="padding: 12px 14px; color: var(--navy); font-size: var(--fs-xs);">
+                            {{ d.center_name or d.center_id }}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            {{ d.department or 'General Medicine' }}
+                        </td>
+                        <td style="padding: 12px 14px; color: var(--navy);">
+                            {{ d.doctor_name or 'Medical Officer' }}
+                        </td>
+                        <td style="padding: 12px 14px; color: var(--muted); font-size: var(--fs-xs);">
+                            {{ d.updated_at or d.slot_time }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--sp-8); color: var(--muted);">
+            <h3>No completed discharge records found.</h3>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

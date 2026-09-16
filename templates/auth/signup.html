@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('auth.signup') }} - {{ _('app.name') }}{% endblock %}
+
+{% block body %}
+<div style="display:flex; min-height:100vh; background: var(--bg);">
+
+    <div class="auth-hero-pane" style="flex:1; background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%); display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--white); padding: var(--sp-8);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <h1 style="color:var(--white); margin-top: var(--sp-4); font-size: var(--fs-2xl); text-align: center;">{{ _('app.name') }}</h1>
+        <p style="opacity:0.85; margin-top: var(--sp-2); text-align:center; max-width:380px; font-size: var(--fs-sm); line-height: 1.6;">
+            {{ _('app.tagline') }}
+        </p>
+
+        <div style="margin-top: var(--sp-8); background: rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: var(--sp-5); max-width: 380px; border: 1px solid rgba(255,255,255,0.15); width: 100%;">
+            <div style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-3); align-items: center;">
+                <span style="font-size: var(--fs-sm);">{{ _('landing.feature_records') }}</span>
+            </div>
+            <div style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-3); align-items: center;">
+                <span style="font-size: var(--fs-sm);">{{ _('landing.feature_teleconsult') }}</span>
+            </div>
+            <div style="display: flex; gap: var(--sp-3); align-items: center;">
+                <span style="font-size: var(--fs-sm);">{{ _('landing.feature_followup') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="flex:1.2; display:flex; align-items:center; justify-content:center; padding: var(--sp-6) var(--sp-4); overflow-y: auto;">
+        <div style="width:100%; max-width:560px; background: var(--white); padding: var(--sp-8); border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-sm); margin: var(--sp-4) 0;">
+            
+            <div style="margin-bottom: var(--sp-6);">
+                <h2 style="margin: 0 0 6px; color: var(--navy); font-size: 1.5rem; font-weight: 700;">{{ _('auth.signup') }}</h2>
+                <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">{{ _('app.tagline') }}</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.signup') }}" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);" class="form-row-2col">
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="full_name" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.full_name') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="text" id="full_name" name="full_name" required minlength="2" maxlength="100" value="{{ form_data.get('full_name', '') }}" placeholder="e.g. Ramesh Patel"
+                               style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="username" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.username') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="text" id="username" name="username" required minlength="3" maxlength="30" pattern="^[a-z0-9._-]+$" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" oninput="this.value = this.value.toLowerCase()" value="{{ form_data.get('username', '') }}" placeholder="e.g. ramesh99"
+                               style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);" class="form-row-2col">
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="dob" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.age_dob') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="date" id="dob" name="dob" required max="9999-12-31" value="{{ form_data.get('dob', '') }}"
+                               style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="gender" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.gender') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <select id="gender" name="gender" required
+                                style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                            <option value="" disabled {% if not form_data.get('gender') %}selected{% endif %}>{{ _('auth.select_gender') }}</option>
+                            <option value="M" {% if form_data.get('gender') == 'M' %}selected{% endif %}>{{ _('auth.gender_male') }}</option>
+                            <option value="F" {% if form_data.get('gender') == 'F' %}selected{% endif %}>{{ _('auth.gender_female') }}</option>
+                            <option value="Other" {% if form_data.get('gender') == 'Other' %}selected{% endif %}>{{ _('auth.gender_other') }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);" class="form-row-2col">
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="blood_group" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.blood_group') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <select id="blood_group" name="blood_group" required
+                                style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                            <option value="" disabled {% if not form_data.get('blood_group') %}selected{% endif %}>{{ _('auth.select_blood_group') }}</option>
+                            <option value="Not Sure" {% if form_data.get('blood_group') == 'Not Sure' %}selected{% endif %}>Not Sure / Unknown</option>
+                            <option value="A+" {% if form_data.get('blood_group') == 'A+' %}selected{% endif %}>A+</option>
+                            <option value="A-" {% if form_data.get('blood_group') == 'A-' %}selected{% endif %}>A-</option>
+                            <option value="B+" {% if form_data.get('blood_group') == 'B+' %}selected{% endif %}>B+</option>
+                            <option value="B-" {% if form_data.get('blood_group') == 'B-' %}selected{% endif %}>B-</option>
+                            <option value="AB+" {% if form_data.get('blood_group') == 'AB+' %}selected{% endif %}>AB+</option>
+                            <option value="AB-" {% if form_data.get('blood_group') == 'AB-' %}selected{% endif %}>AB-</option>
+                            <option value="O+" {% if form_data.get('blood_group') == 'O+' %}selected{% endif %}>O+</option>
+                            <option value="O-" {% if form_data.get('blood_group') == 'O-' %}selected{% endif %}>O-</option>
+                        </select>
+                    </div>
+
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="phone" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.phone') }} <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 400;">({{ _('common.optional') }})</span>
+                        </label>
+                        <input type="tel" id="phone" name="phone" maxlength="20" pattern="^[0-9+\-\s()]{7,20}$" title="Enter a valid phone number" value="{{ form_data.get('phone', '') }}" placeholder="e.g. +91 9876543210"
+                               style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="email" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        {{ _('auth.email') }} <span style="color: var(--red);">*</span>
+                    </label>
+                    <input type="email" id="email" name="email" required maxlength="100" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email" value="{{ form_data.get('email', '') }}" placeholder="name@example.com"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="address" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        {{ _('auth.address') }} <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 400;">({{ _('common.optional') }})</span>
+                    </label>
+                    <input type="text" id="address" name="address" maxlength="255" value="{{ form_data.get('address', '') }}" placeholder="e.g. Near Bakrol Gate, Anand"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);" class="form-row-2col">
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="password" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.password') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="password" id="password" name="password" required minlength="8" maxlength="128" autocomplete="new-password" placeholder="Min. 8 characters"
+                               style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                    </div>
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="confirm_password" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.confirm_password') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="password" id="confirm_password" name="confirm_password" required minlength="8" maxlength="128" autocomplete="new-password" placeholder="Re-enter password"
+                               style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn lg" style="width:100%; margin-top: var(--sp-3); background: var(--blue); color: #fff; height: 46px; border-radius: var(--radius); font-weight: 600; font-size: var(--fs-base); border: none; cursor: pointer;">
+                    {{ _('auth.btn_register_patient') }}
+                </button>
+            </form>
+
+            <p style="text-align:center; margin-top: var(--sp-5); color: var(--muted); font-size: var(--fs-sm);">
+                {{ _('auth.has_account') }} <a href="{{ url_for('auth.login') }}" style="font-weight: 600; color: var(--blue); text-decoration: none;">{{ _('auth.login') }}</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .auth-hero-pane { display: none !important; }
+    .form-row-2col { grid-template-columns: 1fr !important; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dob = document.getElementById('dob');
+    if (dob) {
+        dob.max = new Date().toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}

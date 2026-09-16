@@ -1,0 +1,460 @@
+{% extends "shell.html" %}
+{% block page_title %}Patient Electronic Health Registry{% endblock %}
+
+{% block sidebar_nav %}
+{% if current_user %}
+    {% if current_user.role == 'asha' %}{% include "asha/_nav.html" %}
+    {% elif current_user.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist') %}{% include "phc/_nav.html" %}
+    {% elif current_user.role == 'region_admin' %}{% include "region/_nav.html" %}
+    {% elif current_user.role == 'system_admin' %}{% include "admin/_nav.html" %}
+    {% elif current_user.role == 'patient' %}{% include "patient/_nav.html" %}
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1360px; margin: 0 auto; padding-bottom: var(--sp-8);">
+    
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--sp-4); margin-bottom: var(--sp-6);">
+        <div>
+            <div style="display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 4px;">
+                <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: var(--navy); letter-spacing: -0.02em;">
+                    Patient Electronic Health Registry
+                </h1>
+                <span style="background: var(--sky); color: var(--blue); padding: 3px 10px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; border: 1px solid var(--line);">
+                    Live EHR Directory
+                </span>
+            </div>
+            <p style="color: var(--muted); font-size: var(--fs-sm); margin: 0;">
+                Comprehensive demographic index, clinical risk categorization, and facility assignment records.
+            </p>
+        </div>
+        <div style="display: flex; gap: var(--sp-3); align-items: center;">
+            {% if current_user.role in ('doctor', 'nurse', 'receptionist', 'care_taker', 'region_admin', 'system_admin') %}
+            <button type="button" class="btn" onclick="openModal('add-patient-modal')" style="display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 10px 18px; border-radius: var(--radius); background: var(--blue); color: #fff; box-shadow: var(--shadow-sm); cursor: pointer;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+                Register New Patient
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+        <div class="cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+        
+        <div class="card" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--line); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Total Patients</span>
+                <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+            </div>
+            <div>
+                <div style="font-size: 1.85rem; font-weight: 800; color: var(--navy); line-height: 1.1;">{{ stats.total if stats else patients|length }}</div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Registered digital records</div>
+            </div>
+        </div>
+
+        <div class="card" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--line); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">High-Risk Flags</span>
+                <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--red-bg); color: var(--red); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </span>
+            </div>
+            <div>
+                <div style="font-size: 1.85rem; font-weight: 800; color: var(--red); line-height: 1.1;">{{ stats.high_risk if stats else 0 }}</div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Requiring prioritized clinical review</div>
+            </div>
+        </div>
+
+        <div class="card" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--line); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Demographics</span>
+                <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </span>
+            </div>
+            <div>
+                <div style="display: flex; gap: var(--sp-3); align-items: baseline;">
+                    <div>
+                        <span style="font-size: 1.4rem; font-weight: 800; color: var(--navy);">{{ stats.male if stats else 0 }}</span>
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 600;">Male</span>
+                    </div>
+                    <div style="color: var(--line); font-size: 1.2rem;">/</div>
+                    <div>
+                        <span style="font-size: 1.4rem; font-weight: 800; color: var(--navy);">{{ stats.female if stats else 0 }}</span>
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 600;">Female</span>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Gender distribution</div>
+            </div>
+        </div>
+
+        <div class="card" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--line); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                <span style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Active Network</span>
+                <span style="width: 34px; height: 34px; border-radius: 8px; background: var(--amber-bg); color: var(--amber); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"></rect><line x1="12" y1="10" x2="12" y2="14"></line><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                </span>
+            </div>
+            <div>
+                <div style="font-size: 1.85rem; font-weight: 800; color: var(--navy); line-height: 1.1;">{{ stats.centers_count if stats else (centers|length if centers else 1) }}</div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">PHCs, SubCentres & District Hospitals</div>
+            </div>
+        </div>
+
+    </div>
+
+        <div class="panel" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--line); padding: var(--sp-5); margin-bottom: var(--sp-6); box-shadow: var(--shadow-sm);">
+        <form method="GET" action="/patient/" style="display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
+            
+            <div style="flex: 1.8; min-width: 240px;">
+                <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+                    Search Registry
+                </label>
+                <div style="position: relative;">
+                    <input type="text" name="q" value="{{ search_q or '' }}" placeholder="Search by name, patient ID, phone, or blood group..." style="width: 100%; height: 40px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); font-family: var(--font); color: var(--ink); background: var(--bg);">
+                </div>
+            </div>
+
+            <div style="flex: 1.2; min-width: 180px;">
+                <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+                    Healthcare Facility
+                </label>
+                <select name="center_id" style="width: 100%; height: 40px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg); color: var(--ink);">
+                    <option value="all">All Facilities</option>
+                    {% for c in centers %}
+                        <option value="{{ c.id }}" {% if center_filter == c.id %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 0.9; min-width: 140px;">
+                <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+                    Risk Status
+                </label>
+                <select name="risk" style="width: 100%; height: 40px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg); color: var(--ink);">
+                    <option value="all">All Risk Levels</option>
+                    <option value="high" {% if risk_filter == 'high' %}selected{% endif %}>High Risk Only</option>
+                    <option value="standard" {% if risk_filter == 'standard' %}selected{% endif %}>Standard Care</option>
+                </select>
+            </div>
+
+            <div style="flex: 0.8; min-width: 120px;">
+                <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+                    Gender
+                </label>
+                <select name="gender" style="width: 100%; height: 40px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg); color: var(--ink);">
+                    <option value="all">All</option>
+                    <option value="M" {% if gender_filter == 'M' %}selected{% endif %}>Male</option>
+                    <option value="F" {% if gender_filter == 'F' %}selected{% endif %}>Female</option>
+                    <option value="O" {% if gender_filter == 'O' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: var(--sp-2);">
+                <button type="submit" class="btn sm" style="height: 40px; padding: 0 18px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; background: var(--navy); color: #fff; border-radius: var(--radius);">
+                    Apply Filters
+                </button>
+                <a href="/patient/" class="btn sm outline" style="height: 40px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius);">
+                    Reset
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+        <div class="panel" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-sm); overflow: hidden; padding: 0;">
+        
+        <div style="padding: var(--sp-4) var(--sp-6); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; background: #fafcfe;">
+            <div>
+                <h3 style="margin: 0; font-size: var(--fs-md); font-weight: 700; color: var(--navy);">
+                    Registered Patient Profiles
+                </h3>
+                <span style="font-size: var(--fs-xs); color: var(--muted);">
+                    Showing {{ patients|length }} records {% if search_q or center_filter != 'all' or risk_filter != 'all' or gender_filter != 'all' %}(filtered){% endif %}
+                </span>
+            </div>
+            <div>
+                <span style="font-size: var(--fs-xs); font-weight: 600; color: var(--muted); background: var(--bg); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line);">
+                    EHR Compliance: 100% Active
+                </span>
+            </div>
+        </div>
+
+        {% if patients and patients|length > 0 %}
+        <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f4f8fa; border-bottom: 1px solid var(--line);">
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em;">Patient ID</th>
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em;">Patient Details</th>
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em;">Contact & Location</th>
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em;">Clinical Profile</th>
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em;">Assigned Facility</th>
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em;">Status</th>
+                        <th style="padding: 12px 18px; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pat in patients %}
+                    <tr style="border-bottom: 1px solid var(--line); transition: background 0.15s ease;">
+                        
+                                                <td style="padding: 14px 18px; vertical-align: middle;">
+                            <span style="font-family: var(--mono); font-size: var(--fs-xs); font-weight: 700; color: var(--navy); background: var(--sky); padding: 4px 8px; border-radius: 6px; border: 1px solid #cce5ef; display: inline-block;">
+                                {{ pat.id }}
+                            </span>
+                            {% if pat.created_at %}
+                            <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">
+                                Reg: {{ pat.created_at.strftime('%d %b %Y') if pat.created_at.strftime else pat.created_at }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                                                <td style="padding: 14px 18px; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: {% if pat.gender == 'F' %}#fce7f3; color: #db2777;{% elif pat.gender == 'M' %}#e0f2fe; color: #0284c7;{% else %}#f3f4f6; color: #4b5563;{% endif %} display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;">
+                                    {{ pat.full_name[:1] if pat.full_name else 'P' }}
+                                </div>
+                                <div>
+                                    <a href="/patient/{{ pat.id }}" style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm); text-decoration: none; display: block;">
+                                        {{ pat.full_name }}
+                                    </a>
+                                    <div style="font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px;">
+                                        <span>Age: {{ pat.dob | age }} yrs</span>
+                                        <span>•</span>
+                                        <span style="font-weight: 600; color: {% if pat.gender == 'F' %}#be185d{% elif pat.gender == 'M' %}#0369a1{% else %}var(--muted){% endif %};">
+                                            {% if pat.gender == 'M' %}Male{% elif pat.gender == 'F' %}Female{% else %}Other{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                                                <td style="padding: 14px 18px; vertical-align: middle;">
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: var(--ink);">
+                                 {{ pat.phone or 'No phone' }}
+                            </div>
+                            {% if pat.address %}
+                            <div style="font-size: 11px; color: var(--muted); margin-top: 3px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ pat.address }}">
+                                 {{ pat.address }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                                                <td style="padding: 14px 18px; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <span style="background: #fee2e2; color: #b91c1c; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #fca5a5;">
+                                    {{ pat.blood_group or 'O+' }}
+                                </span>
+                                {% if pat.is_high_risk %}
+                                <span style="background: #fef2f2; color: #dc2626; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #fecaca;">
+                                    Alert Case
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if pat.conditions_list and pat.conditions_list|length > 0 %}
+                            <div style="font-size: 11px; color: var(--muted); margin-top: 4px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ pat.conditions_list|join(', ') }}">
+                                {{ pat.conditions_list|join(', ') }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                                                <td style="padding: 14px 18px; vertical-align: middle;">
+                            <span style="font-size: var(--fs-xs); font-weight: 600; color: var(--navy); display: inline-flex; align-items: center; gap: 4px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"></rect><line x1="12" y1="10" x2="12" y2="14"></line><line x1="10" y1="12" x2="14" y2="12"></line></svg> {{ pat.facility_name or pat.facility_id or 'General Network' }}
+                            </span>
+                            {% if pat.facility_region %}
+                            <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">
+                                {{ pat.facility_region }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                                                <td style="padding: 14px 18px; vertical-align: middle;">
+                            {% if pat.is_high_risk %}
+                            <span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(239, 68, 68, 0.12); color: #b91c1c; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.25);">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #dc2626; display: inline-block;"></span>
+                                High Risk
+                            </span>
+                            {% else %}
+                            <span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(22, 163, 74, 0.1); color: #15803d; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid rgba(22, 163, 74, 0.2);">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a; display: inline-block;"></span>
+                                Standard Care
+                            </span>
+                            {% endif %}
+                        </td>
+
+                                                <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+                            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                <a href="/patient/{{ pat.id }}" class="btn sm" style="background: var(--blue); color: #fff; font-weight: 600; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: var(--fs-xs);">
+                                    View EHR
+                                </a>
+                                {% if current_user.role in ('doctor', 'nurse', 'system_admin') %}
+                                <a href="/phc/consultation/{{ pat.id }}" class="btn sm outline" style="padding: 6px 10px; border-radius: 6px; text-decoration: none; font-size: var(--fs-xs); color: var(--navy); border: 1px solid var(--line);" title="Start Clinical Consultation">
+                                    Consult
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+                <div style="text-align: center; padding: var(--sp-12) var(--sp-6);">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--sky); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto var(--sp-4);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--navy); margin-bottom: 6px;">No Patient Records Found</h3>
+            <p style="color: var(--muted); font-size: var(--fs-sm); max-width: 440px; margin: 0 auto var(--sp-5);">
+                We could not find any registered patient profiles matching your search criteria or filter configuration.
+            </p>
+            <div style="display: flex; gap: var(--sp-3); justify-content: center;">
+                <a href="/patient/" class="btn sm outline" style="padding: 8px 16px;">Clear Filters</a>
+                {% if current_user.role in ('doctor', 'nurse', 'receptionist', 'care_taker', 'region_admin', 'system_admin') %}
+                <button type="button" class="btn sm" onclick="openModal('add-patient-modal')" style="background: var(--blue); color: #fff; padding: 8px 16px;">
+                    + Register First Patient
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<div id="add-patient-modal" class="modal" style="display: none;">
+    <div class="modal-dialog" style="max-width: 660px; width: 95%;">
+        <div class="modal-card" style="background: var(--white); border-radius: var(--radius-xl); padding: var(--sp-6); box-shadow: var(--shadow-xl); border: 1px solid var(--line);">
+            
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-5); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--line);">
+                <div>
+                    <h3 class="modal-title" style="margin: 0; color: var(--navy); font-size: 1.3rem; font-weight: 800;">
+                        Register Patient in EHR Registry
+                    </h3>
+                    <p style="color: var(--muted); font-size: var(--fs-xs); margin: 2px 0 0;">
+                        Creates a formal medical record identity with assigned healthcare center.
+                    </p>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('add-patient-modal')" style="background: none; border: none; font-size: 24px; color: var(--muted); cursor: pointer; line-height: 1;">
+                    &times;
+                </button>
+            </div>
+
+            <form method="POST" action="/patient/add">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-4);">
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Full Legal Name <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="text" name="full_name" required placeholder="e.g. Anandiben Patel" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Date of Birth <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="date" name="dob" required min="1900-01-01" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); margin-bottom: var(--sp-4);">
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Gender <span style="color: var(--red);">*</span>
+                        </label>
+                        <select name="gender" required style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                            <option value="M">Male</option>
+                            <option value="F">Female</option>
+                            <option value="O">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Blood Group
+                        </label>
+                        <select name="blood_group" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                            <option value="O+">O+</option>
+                            <option value="A+">A+</option>
+                            <option value="B+">B+</option>
+                            <option value="AB+">AB+</option>
+                            <option value="O-">O-</option>
+                            <option value="A-">A-</option>
+                            <option value="B-">B-</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Contact Phone <span style="color: var(--red);">*</span>
+                        </label>
+                        <input type="tel" name="phone" required placeholder="+91 98765 00000" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: var(--sp-4);">
+                    <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                        Allocated Facility Center
+                    </label>
+                    <select name="center_id" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                        {% for c in centers %}
+                            <option value="{{ c.id }}" {% if current_user.center_id == c.id %}selected{% endif %}>
+                                {{ c.name }} ({{ c.id }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: var(--sp-4);">
+                    <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                        Residential Address / Village / District
+                    </label>
+                    <input type="text" name="address" placeholder="e.g. Station Road, Near Sardar Chowk, Karamsad, Anand 388325" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-bottom: var(--sp-4);">
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Known Allergies (comma separated)
+                        </label>
+                        <input type="text" name="allergies" placeholder="e.g. Penicillin, Sulfa" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                            Chronic Conditions (comma separated)
+                        </label>
+                        <input type="text" name="chronic_conditions" placeholder="e.g. Hypertension, Diabetes" style="width: 100%; height: 38px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--bg);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: var(--sp-6); background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius); padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="is_high_risk" name="is_high_risk" value="1" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--red);">
+                    <label for="is_high_risk" style="font-size: var(--fs-sm); font-weight: 700; color: #991b1b; cursor: pointer; margin: 0;">
+                        Mark as High-Risk Patient (Priority Care / Surveillance Alert)
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line);">
+                    <button type="button" class="btn outline" onclick="closeModal('add-patient-modal')" style="padding: 8px 18px; border-radius: var(--radius);">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn" style="background: var(--blue); color: #fff; font-weight: 700; padding: 8px 22px; border-radius: var(--radius);">
+                        Register Patient Record
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

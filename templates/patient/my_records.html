@@ -1,0 +1,390 @@
+{% extends "shell.html" %}
+{% block page_title %}{{ _('patient.records') }}{% endblock %}
+{% block sidebar_nav %}{% include "patient/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 style="display: flex; align-items: center; gap: var(--sp-2);">
+            {{ _('patient.records') }} & Clinical History
+        </h1>
+        <p class="text-muted">Complete electronic health records, diagnostic tests, consultations, and prescriptions for
+            @{{ profile_username }}</p>
+    </div>
+    <div style="display: flex; gap: var(--sp-2);">
+        <a href="/patient/@{{ profile_username }}" class="btn outline"><- Back to Dashboard</a>
+    </div>
+</div>
+
+{% if patient %}
+
+<div class="cards" style="margin-bottom: var(--sp-6);">
+    <div class="card">
+        <div class="card-label">Patient Name</div>
+        <div class="card-value" style="font-size: 1.15rem; color: var(--navy);">{{ patient.full_name }}</div>
+        <span style="font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono);">ID: {{ patient.id
+            }}</span>
+    </div>
+    <div class="card">
+        <div class="card-label">Age / Gender</div>
+        <div class="card-value" style="font-size: 1.15rem;">{{ patient.dob | age }} / {{ patient.gender }}</div>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Blood Group: <strong>{{ patient.blood_group or 'O+'
+                }}</strong></span>
+    </div>
+    <div class="card">
+        <div class="card-label">Assigned Facility</div>
+        <div class="card-value" style="font-size: 1.15rem;">{{ patient.center_id }}</div>
+        <span
+            style="font-size: var(--fs-xs); color: {% if patient.is_high_risk %}#dc2626{% else %}var(--muted){% endif %}; font-weight: {% if patient.is_high_risk %}700{% else %}normal{% endif %};">
+            Status: {{ 'High Risk Patient' if patient.is_high_risk else 'Normal / Stable' }}
+        </span>
+    </div>
+</div>
+
+<div class="panel"
+    style="margin-bottom: var(--sp-6); border: 1px solid rgba(220, 38, 38, 0.2); background: linear-gradient(180deg, #fff 0%, #fff9f9 100%);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div>
+                <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);">Allergies & Medical Alerts</h3>
+                <p style="margin: 0; font-size: var(--fs-xs); color: var(--muted);">Patient allergy profile and known
+                    chronic conditions</p>
+            </div>
+        </div>
+        <span
+            style="font-size: var(--fs-xs); background: var(--bg); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line); font-weight: 600;">
+            Safety Profile
+        </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sp-4);">
+
+        <div
+            style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3);">
+            <div
+                style="font-size: var(--fs-xs); text-transform: uppercase; font-weight: 700; color: var(--muted); margin-bottom: var(--sp-2); letter-spacing: 0.5px;">
+                 KnownAllergies
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                {% if patient.allergies_list and patient.allergies_list|length > 0 and patient.allergies_list != ['Not
+                Allergic'] and patient.allergies_list != ['none'] and patient.allergies_list != ['None'] %}
+                {% for item in patient.allergies_list %}
+                {% if item and item not in ('none', 'None') %}
+                <span
+                    style="background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.25); font-weight: 600; padding: 4px 10px; border-radius: 20px; font-size: var(--fs-xs);">
+                     {{ item }}
+                </span>
+                {% endif %}
+                {% endfor %}
+                {% else %}
+                <span
+                    style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-weight: 600; padding: 4px 12px; border-radius: 20px; font-size: var(--fs-xs); display: inline-flex; align-items: center; gap: 4px;">
+                   Not Allergic (No known drug/food allergies)
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div
+            style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3);">
+            <div
+                style="font-size: var(--fs-xs); text-transform: uppercase; font-weight: 700; color: var(--muted); margin-bottom: var(--sp-2); letter-spacing: 0.5px;">
+                Chronic Health Conditions
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                {% if patient.conditions_list and patient.conditions_list|length > 0 %}
+                {% for cond in patient.conditions_list %}
+                <span
+                    style="background: var(--sky); color: var(--navy); border: 1px solid rgba(20, 121, 169, 0.2); font-weight: 600; padding: 4px 10px; border-radius: 20px; font-size: var(--fs-xs);">
+                     {{ cond }}
+                </span>
+                {% endfor %}
+                {% else %}
+                <span style="color: var(--muted); font-size: var(--fs-xs); font-style: italic; padding: 4px 0;">
+                    No chronic conditions recorded
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel" style="margin-bottom: var(--sp-6);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <div>
+            <h3
+                style="margin: 0; color: var(--navy); font-size: var(--fs-md); display: flex; align-items: center; gap: 6px;">
+               Prescription & Medication History
+            </h3>
+            <p style="margin: 2px 0 0; font-size: var(--fs-xs); color: var(--muted);">All active and historical
+                medication regimens issued by physicians</p>
+        </div>
+        <span
+            style="font-size: var(--fs-xs); background: var(--bg); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line); font-weight: 600;">
+            Total: {{ prescriptions|length if prescriptions else 0 }}
+        </span>
+    </div>
+
+    {% if prescriptions %}
+    <div style="display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+        {% for rx in prescriptions %}
+        <div class="card" style="padding: var(--sp-4); border-left: 4px solid var(--blue); background: var(--white);">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                <strong style="color: var(--navy); font-size: var(--fs-sm);">Prescription #{{ rx.id }}</strong>
+                <span style="font-size: var(--fs-xs); color: var(--muted);">{{ rx.created_at.strftime('%b %d, %Y')
+                    }}</span>
+            </div>
+            {% if rx.notes %}
+            <p style="font-size: var(--fs-xs); color: var(--ink); margin-bottom: var(--sp-2);">
+                <strong>Instructions:</strong> {{ rx.notes }}
+            </p>
+            {% endif %}
+            <div
+                style="background: var(--bg); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius); border: 1px solid var(--line);">
+                <span
+                    style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase;">PRESCRIBED
+                    MEDICINES:</span>
+                <ul style="font-size: var(--fs-sm); margin: 4px 0 0 var(--sp-4); padding: 0;">
+                    {% for med in rx.medicines_parsed %}
+                    <li>
+                        <strong>{{ med.name }}</strong>
+                        {% if med.dosage %}<span style="color: var(--navy);">({{ med.dosage }})</span>{% endif %}
+                        {% if med.duration %}<span style="color: var(--muted); font-size: var(--fs-xs);"> - {{
+                            med.duration }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div
+                style="font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-3); border-top: 1px dashed var(--line); padding-top: var(--sp-2);">
+                <span>Facility: <strong>{{ rx.center_name or rx.center_id }}</strong></span><br>
+                <span>Prescribed by: <strong>Dr. {{ rx.doctor_name or 'Medical Officer' }} (#{{ rx.prescribed_by
+                        }})</strong></span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: var(--sp-4) 0;">
+
+        <p class="text-muted" style="margin: 0;">No prescriptions on record.</p>
+    </div>
+    {% endif %}
+</div>
+
+
+<div class="panel" style="margin-bottom: var(--sp-6);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <div>
+            <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md); display: flex; align-items: center; gap: 6px;">
+                Hospital Referrals & Center Transfers
+            </h3>
+            <p style="margin: 2px 0 0; font-size: var(--fs-xs); color: var(--muted);">Track outgoing/incoming inter-facility transfers, specialist counters, and ambulance logistics</p>
+        </div>
+        <span style="font-size: var(--fs-xs); background: var(--bg); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line); font-weight: 600;">
+            Total: {{ referrals|length if referrals else 0 }}
+        </span>
+    </div>
+
+    {% if referrals %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--sp-4);">
+        {% for ref in referrals %}
+        <div class="card" style="padding: var(--sp-4); background: var(--white); border-left: 4px solid {% if ref.urgency == 'critical' %}#ef4444{% elif ref.urgency == 'high' %}#f97316{% elif ref.urgency == 'medium' %}#eab308{% else %}#3b82f6{% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-2);">
+                <span style="font-family: var(--mono); font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Ref #{{ ref.id }}</span>
+                <div style="display: flex; gap: 6px;">
+                    <span style="font-size: 10px; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: {% if ref.urgency == 'critical' %}#fee2e2; color: #991b1b;{% elif ref.urgency == 'high' %}#ffedd5; color: #9a3412;{% elif ref.urgency == 'medium' %}#fef9c3; color: #854d0e;{% else %}#eff6ff; color: #1e40af;{% endif %}">
+                        {{ ref.urgency }}
+                    </span>
+                    <span style="font-size: 10px; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: {% if ref.status == 'completed' %}#dcfce7; color: #166534;{% elif ref.status in ['in_transit', 'accepted'] %}#dbeafe; color: #1e40af;{% elif ref.status == 'rejected' %}#fee2e2; color: #991b1b;{% else %}#f1f5f9; color: #475569;{% endif %}">
+                        {{ ref.status|replace('_', ' ') }}
+                    </span>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3); background: var(--bg); border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: var(--sp-3); font-size: var(--fs-sm);">
+                <div>
+                    <span style="font-size: 10px; color: var(--muted); text-transform: uppercase; display: block;">From</span>
+                    <strong style="color: var(--navy);">{{ ref.from_center_name or ref.from_center }}</strong>
+                </div>
+                <div style="color: var(--muted); font-size: 16px;">&rarr;</div>
+                <div style="text-align: right;">
+                    <span style="font-size: 10px; color: var(--muted); text-transform: uppercase; display: block;">Destination</span>
+                    <strong style="color: var(--teal);">{{ ref.to_center_name or ref.to_center }}</strong>
+                </div>
+            </div>
+
+            <p style="font-size: var(--fs-sm); margin: 0 0 var(--sp-2); color: var(--ink);">
+                <strong>Reason:</strong> {{ ref.reason }}
+            </p>
+            {% if ref.notes %}
+            <p style="font-size: var(--fs-xs); color: var(--muted); margin: 0 0 var(--sp-2); font-style: italic; background: #fafafa; padding: 6px; border-radius: 4px;">
+                <strong>Clinical Notes:</strong> {{ ref.notes }}
+            </p>
+            {% endif %}
+
+            <div style="font-size: var(--fs-xs); color: var(--muted); border-top: 1px dashed var(--line); padding-top: var(--sp-2); display: flex; justify-content: space-between;">
+                <span>Physician: <strong>Dr. {{ ref.doctor_name or 'Medical Officer' }}</strong></span>
+                <span>{{ ref.created_at.strftime('%b %d, %Y') if ref.created_at else '' }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: var(--sp-4) 0;">
+        <p class="text-muted" style="margin: 0;">No hospital referrals or transfer records found.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <div>
+            <h3
+                style="margin: 0; color: var(--navy); font-size: var(--fs-md); display: flex; align-items: center; gap: 6px;">
+               Diagnostic & Clinical Records
+            </h3>
+            <p style="margin: 2px 0 0; font-size: var(--fs-xs); color: var(--muted);">Consultation notes, clinical
+                observations, diagnostic findings, and attached prescriptions</p>
+        </div>
+        <span
+            style="font-size: var(--fs-xs); background: var(--bg); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line); font-weight: 600;">
+            Total: {{ records|length if records else 0 }}
+        </span>
+    </div>
+
+    {% if records %}
+    <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+        {% for r in records %}
+        <div class="card" style="padding: var(--sp-5); background: var(--white);">
+            <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-2); flex-wrap: wrap; gap: var(--sp-2);">
+                <div>
+                    <h3 style="font-size: 1.1rem; color: var(--navy); margin: 0 0 4px;">{{ r.title }}</h3>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span
+                            style="background: var(--sky); color: var(--navy); padding: 2px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; font-weight: 700;">
+                            {{ r.record_type }}
+                        </span>
+                        <span style="font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono);">Record #{{
+                            r.id }}</span>
+                    </div>
+                </div>
+                <span
+                    style="font-size: var(--fs-xs); color: var(--muted); background: var(--bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line);">
+                     {{ r.created_at.strftime('%b %d, %Y - %I:%M %p') }}
+                </span>
+            </div>
+
+            <div
+                style="font-size: var(--fs-sm); color: var(--ink); background: var(--bg); padding: var(--sp-4); border-radius: var(--radius); border: 1px solid var(--line); margin-top: var(--sp-3);">
+                {% if r.data_parsed and r.data_parsed.symptoms %}
+                <div style="margin-bottom: var(--sp-3);">
+                    <strong style="color: var(--navy);">Chief Complaints / Symptoms:</strong>
+                    <p style="margin: 4px 0 0; color: var(--ink);">{{ r.data_parsed.symptoms }}</p>
+                </div>
+                {% endif %}
+
+                {% if r.data_parsed and r.data_parsed.notes %}
+                <div style="margin-bottom: var(--sp-3);">
+                    <strong style="color: var(--navy);">Clinical Diagnosis & Findings:</strong>
+                    <p style="margin: 4px 0 0; color: var(--ink);">{{ r.data_parsed.notes }}</p>
+                </div>
+                {% endif %}
+
+                {% if r.data_parsed and r.data_parsed.vitals %}
+                <div style="margin-bottom: var(--sp-3);">
+                    <strong style="color: var(--navy); font-size: var(--fs-xs); text-transform: uppercase;">Recorded
+                        Vitals:</strong>
+                    <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: 6px;">
+                        {% for k, v in r.data_parsed.vitals.items() %}
+                        {% if v %}
+                        <div
+                            style="background: var(--white); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--line); font-size: var(--fs-xs);">
+                            <span style="color: var(--muted); text-transform: uppercase; font-size: 10px;">{{ k
+                                }}:</span>
+                            <strong style="color: var(--navy);">{{ v }}</strong>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if r.prescriptions %}
+                <div
+                    style="margin-top: var(--sp-3); background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius); padding: var(--sp-3);">
+                    <div
+                        style="font-weight: 700; color: #166534; font-size: var(--fs-xs); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                       PRESCRIBED MEDICINES & REGIMEN
+                    </div>
+                    {% for rx in r.prescriptions %}
+                    {% if rx.medicines_parsed %}
+                    <ul style="margin: 0 0 6px var(--sp-4); padding: 0; font-size: var(--fs-sm); color: #1e293b;">
+                        {% for med in rx.medicines_parsed %}
+                        <li>
+                            <strong>{{ med.name }}</strong>
+                            {% if med.dosage %} - <span style="color: #0f766e;">{{ med.dosage }}</span>{% endif %}
+                            {% if med.duration %} <span style="color: var(--muted); font-size: var(--fs-xs);">({{
+                                med.duration }})</span>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if rx.notes %}
+                    <div style="font-size: var(--fs-xs); color: #334155; font-style: italic;">
+                        <strong>Notes / Instructions:</strong> {{ rx.notes }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% elif r.data_parsed and r.data_parsed.medicines %}
+                <div
+                    style="margin-top: var(--sp-3); background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius); padding: var(--sp-3);">
+                    <div
+                        style="font-weight: 700; color: #166534; font-size: var(--fs-xs); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                       PRESCRIBED MEDICINES
+                    </div>
+                    <ul style="margin: 0; padding-left: var(--sp-4); font-size: var(--fs-sm); color: #1e293b;">
+                        {% for med in r.data_parsed.medicines %}
+                        <li>
+                            <strong>{{ med.name if med is mapping else med }}</strong>
+                            {% if med is mapping and med.dosage %} - <span style="color: #0f766e;">{{ med.dosage
+                                }}</span>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if not r.data_parsed or (not r.data_parsed.notes and not r.data_parsed.vitals and not
+                r.data_parsed.symptoms and not r.prescriptions) %}
+                <pre
+                    style="font-family: var(--mono); font-size: 12px; margin: 0; white-space: pre-wrap; word-break: break-all;">{{ r.data }}</pre>
+                {% endif %}
+            </div>
+
+            <div
+                style="font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-3); display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-2);">
+                <div>
+                    Facility: <strong>{{ r.center_name or r.center_id }}</strong>
+                </div>
+                <div>
+                    Attending Physician: <strong>Dr. {{ r.doctor_name or 'Medical Officer' }} (#{{ r.created_by
+                        }})</strong>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: var(--sp-8) 0;">
+
+        <h3>{{ _('patient.no_records') }}</h3>
+        <p>No clinical encounters or diagnostic records were found for this patient.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

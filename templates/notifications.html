@@ -1,0 +1,65 @@
+{% extends "shell.html" %}
+{% block page_title %}{{ _('nav.notifications') }}{% endblock %}
+{% block sidebar_nav %}
+{% if current_user and current_user.role == 'patient' %}
+    {% include "patient/_nav.html" %}
+{% elif current_user and current_user.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist') %}
+    {% include "phc/_nav.html" %}
+{% elif current_user and current_user.role == 'region_admin' %}
+    {% include "region/_nav.html" %}
+{% elif current_user and current_user.role == 'system_admin' %}
+    {% include "admin/_nav.html" %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ _('nav.notifications') }}</h1>
+        <p class="text-muted">Viewing alerts and messages for @{{ profile_username }}</p>
+    </div>
+</div>
+
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+        <h3 style="margin: 0;">All Notifications</h3>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Total: {{ notifications|length }}</span>
+    </div>
+
+    {% if notifications %}
+    <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+        {% for n in notifications %}
+        <div class="card" style="padding: var(--sp-4); {% if not n.is_read %}border-left: 4px solid var(--blue); background: rgba(20,121,169,0.02);{% endif %}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-1);">
+                <div style="display: flex; align-items: center; gap: var(--sp-2);">
+                    <strong style="font-size: var(--fs-md); color: var(--navy);">{{ n.title }}</strong>
+                    {% if not n.is_read %}
+                        <span style="background: var(--blue); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600;">NEW</span>
+                    {% endif %}
+                </div>
+                <span style="font-size: var(--fs-xs); color: var(--muted);">
+                    {{ n.created_at.strftime('%b %d, %Y - %I:%M %p') if n.created_at else '' }}
+                </span>
+            </div>
+            {% if n.body %}
+                <p style="font-size: var(--fs-sm); color: var(--ink); margin: var(--sp-2) 0 var(--sp-2) calc(1.2rem + var(--sp-2));">
+                    {{ n.body }}
+                </p>
+            {% endif %}
+            {% if n.link %}
+                <div style="margin-left: calc(1.2rem + var(--sp-2)); margin-top: var(--sp-2);">
+                    <a href="{{ n.link }}" class="btn sm outline">View Details -></a>
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: var(--sp-8) 0;">
+
+        <h3>No Notifications</h3>
+        <p style="color: var(--muted);">You have no new alerts or announcements at this time.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

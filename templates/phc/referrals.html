@@ -1,0 +1,432 @@
+{% extends "shell.html" %}
+
+{% block title %}Patient Referrals & Transfers - {{ _('app.name') }}{% endblock %}
+{% block page_title %}Inter-Facility Patient Referrals & Transfers{% endblock %}
+{% block sidebar_nav %}{% include "phc/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-3);">
+    <div>
+        <h1 style="margin: 0 0 4px; font-size: 1.6rem; color: var(--navy); font-weight: 700;">Inter-Facility Patient Referrals</h1>
+        <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">
+            Coordinate emergency ambulance transfers, specialist secondary care, and hospital counter-referrals across regional centers.
+        </p>
+    </div>
+    {% if can('manage_referrals') %}
+    <button type="button" class="btn" onclick="openCreateReferralModal()"
+            style="background: var(--blue); color: #fff; border: none; padding: 10px 20px; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm);">
+        + Initiate New Referral
+    </button>
+    {% endif %}
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Active Transfers</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: var(--blue); margin-top: 4px;">{{ stats.active_transfers }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">In transit or awaiting intake</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Critical Urgency</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: var(--red); margin-top: 4px;">{{ stats.critical }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Emergency priority cases</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Incoming Transfers</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin-top: 4px;">{{ stats.incoming }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Assigned to this facility</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Outgoing Referrals</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #d97706; margin-top: 4px;">{{ stats.outgoing }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Dispatched to specialist hospitals</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Completed / Resolved</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #15803d; margin-top: 4px;">{{ stats.completed }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Admitted or counter-referred</div>
+    </div>
+</div>
+
+<div class="card" style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: var(--sp-6);">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--sp-4) var(--sp-6); border-bottom: 1px solid var(--line); background: var(--bg); flex-wrap: wrap; gap: var(--sp-3);">
+        <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+            <a href="/phc/referrals?type=all"
+               style="padding: 6px 14px; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; text-decoration: none; background: {% if active_tab == 'all' and not active_status %}var(--navy){% else %}var(--white){% endif %}; color: {% if active_tab == 'all' and not active_status %}#fff{% else %}var(--navy){% endif %}; border: 1px solid var(--line);">
+                All Referrals ({{ stats.total }})
+            </a>
+            <a href="/phc/referrals?type=incoming"
+               style="padding: 6px 14px; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; text-decoration: none; background: {% if active_tab == 'incoming' %}var(--navy){% else %}var(--white){% endif %}; color: {% if active_tab == 'incoming' %}#fff{% else %}var(--navy){% endif %}; border: 1px solid var(--line);">
+                Incoming to Here
+            </a>
+            <a href="/phc/referrals?type=outgoing"
+               style="padding: 6px 14px; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; text-decoration: none; background: {% if active_tab == 'outgoing' %}var(--navy){% else %}var(--white){% endif %}; color: {% if active_tab == 'outgoing' %}#fff{% else %}var(--navy){% endif %}; border: 1px solid var(--line);">
+                Outgoing from Here
+            </a>
+            <a href="/phc/referrals?status=in_transit"
+               style="padding: 6px 14px; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; text-decoration: none; background: {% if active_status == 'in_transit' %}#d97706{% else %}var(--white){% endif %}; color: {% if active_status == 'in_transit' %}#fff{% else %}#d97706{% endif %}; border: 1px solid var(--line);">
+                Ambulance In-Transit
+            </a>
+        </div>
+
+        <div style="display: flex; gap: var(--sp-2); align-items: center;">
+            <span style="font-size: var(--fs-xs); font-weight: 600; color: var(--muted);">Filter Urgency:</span>
+            <select onchange="location.href='/phc/referrals?urgency=' + this.value" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: var(--fs-xs); background: var(--white); outline: none;">
+                <option value="">All Priorities</option>
+                <option value="critical" {% if request.args.get('urgency') == 'critical' %}selected{% endif %}>Critical Emergency</option>
+                <option value="high" {% if request.args.get('urgency') == 'high' %}selected{% endif %}>High Priority</option>
+                <option value="medium" {% if request.args.get('urgency') == 'medium' %}selected{% endif %}>Medium Priority</option>
+                <option value="low" {% if request.args.get('urgency') == 'low' %}selected{% endif %}>Low / Routine</option>
+            </select>
+        </div>
+    </div>
+
+    {% if referrals %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background: var(--white); border-bottom: 2px solid var(--line);">
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">ID & Time</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Patient</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Transfer Route</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Urgency</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Status & Progress</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Clinical Summary</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase; text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in referrals %}
+                <tr style="border-bottom: 1px solid var(--line); background: {% if r.urgency == 'critical' and r.status in ('initiated', 'accepted', 'in_transit') %}#fff5f5{% else %}var(--white){% endif %};">
+                    <td style="padding: 14px 16px; font-family: monospace; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); white-space: nowrap;">
+                        REF-{{ r.id }}<br>
+                        <span style="font-size: 10px; color: var(--muted); font-family: sans-serif; font-weight: normal;">{{ r.created_at.strftime('%d %b, %H:%M') if r.created_at else '' }}</span>
+                    </td>
+
+                    <td style="padding: 14px 16px;">
+                        <a href="/patient/{{ r.patient_id }}" style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm); text-decoration: none;">
+                            {{ r.patient_name or r.patient_id }}
+                        </a><br>
+                        <span style="font-size: 11px; color: var(--muted);">ID: {{ r.patient_id }} {% if r.blood_group %}| Blood: {{ r.blood_group }}{% endif %}</span>
+                    </td>
+
+                    <td style="padding: 14px 16px; font-size: var(--fs-xs);">
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: var(--muted); width: 36px;">From:</span>
+                                <strong style="color: var(--navy);">{{ r.from_center_name or r.from_center }}</strong>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: var(--blue); width: 36px; font-weight: 600;">To:</span>
+                                <strong style="color: var(--blue);">{{ r.to_center_name or r.to_center }}</strong>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td style="padding: 14px 16px; white-space: nowrap;">
+                        {% if r.urgency == 'critical' %}
+                            <span class="badge" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; font-weight: 800; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                Critical Emergency
+                            </span>
+                        {% elif r.urgency == 'high' %}
+                            <span class="badge" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a; font-weight: 700; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                High Priority
+                            </span>
+                        {% elif r.urgency == 'medium' %}
+                            <span class="badge" style="background: var(--sky); color: var(--navy); font-weight: 600; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                Medium
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 600; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                Routine
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding: 14px 16px; white-space: nowrap;">
+                        {% if r.status == 'initiated' %}
+                            <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-block;">
+                                Initiated / Pending
+                            </span>
+                        {% elif r.status == 'accepted' %}
+                            <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-block;">
+                                Accepted by Hospital
+                            </span>
+                        {% elif r.status == 'in_transit' %}
+                            <span class="badge" style="background: #fed7aa; color: #c2410c; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-block;">
+                                Ambulance En-Route
+                            </span>
+                        {% elif r.status == 'completed' %}
+                            <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-block;">
+                                Completed / Admitted
+                            </span>
+                        {% elif r.status == 'counter_referred' %}
+                            <span class="badge" style="background: #f3e8ff; color: #7e22ce; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-block;">
+                                Counter-Referred to PHC
+                            </span>
+                        {% elif r.status == 'rejected' %}
+                            <span class="badge" style="background: #fee2e2; color: #b91c1c; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-block;">
+                                Declined / Redirected
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding: 14px 16px; max-width: 260px;">
+                        <strong style="color: var(--navy); font-size: var(--fs-xs); display: block;">{{ r.reason }}</strong>
+                        {% if r.notes %}
+                        <span style="font-size: 11px; color: var(--muted); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            {{ r.notes }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                        {% if can('manage_referrals') %}
+                        <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+                            {% if r.status in ['initiated', 'accepted', 'in_transit'] %}
+                            <form method="POST" action="/phc/referrals/{{ r.id }}/enqueue" style="display: inline;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn sm" style="background: var(--teal); color: #fff; border: none; padding: 6px 12px; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-xs); cursor: pointer;" title="Directly assign Priority OPD Queue token at destination facility">
+                                    Enqueue in OPD
+                                </button>
+                            </form>
+                            {% endif %}
+                            <button type="button" class="btn sm"
+                                    onclick='openUpdateStatusModal({{ r.id }}, "{{ r.status }}", "{{ r.patient_name or r.patient_id }}", "{{ r.to_center_name or r.to_center }}")'
+                                    style="background: var(--navy); color: #fff; border: none; padding: 6px 12px; border-radius: var(--radius); font-weight: 600; font-size: var(--fs-xs); cursor: pointer;">
+                                Manage Transfer
+                            </button>
+                        </div>
+                        {% else %}
+                        <span style="color: var(--muted); font-size: 11px;">View Only</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: var(--sp-8); text-align: center; color: var(--muted);">
+        <p style="margin: 0; font-size: var(--fs-sm);">No referral cases matching the current filters.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="modal" id="create-referral-modal" style="display: none;">
+    <div class="modal-dialog" style="max-width: 580px;">
+        <div class="modal-card" style="padding: var(--sp-6); width: 100%; max-width: 580px; box-sizing: border-box;">
+            <div class="modal-header" style="margin-bottom: var(--sp-4);">
+                <h3 class="modal-title" style="margin: 0; color: var(--navy); font-size: 1.3rem; font-weight: 700;">
+                    Initiate Inter-Facility Referral
+                </h3>
+                <button type="button" class="modal-close" onclick="closeCreateReferralModal()" aria-label="Close modal" style="font-size: 20px; font-weight: 700; color: var(--muted);">&times;</button>
+            </div>
+
+            <form method="POST" action="/phc/referrals/create" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="ref_patient_id" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Select Patient <span style="color: var(--red);">*</span>
+                    </label>
+                    <select id="ref_patient_id" name="patient_id" required style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none;">
+                        <option value="">-- Choose Patient from Registry --</option>
+                        {% for p in patients_list %}
+                        <option value="{{ p.id }}">{{ p.full_name }} ({{ p.id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="ref_to_center" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            Destination Facility <span style="color: var(--red);">*</span>
+                        </label>
+                        <select id="ref_to_center" name="to_center" required style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none;">
+                            <option value="">-- Choose Destination Hospital --</option>
+                            {% for c in centers_list %}
+                            {% if c.id != center_id %}
+                            <option value="{{ c.id }}">{{ c.name }} ({{ c.type }})</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="ref_urgency" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            Urgency Level <span style="color: var(--red);">*</span>
+                        </label>
+                        <select id="ref_urgency" name="urgency" required style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none;">
+                            <option value="medium">Medium Priority (Within 24h)</option>
+                            <option value="high">High Priority (Immediate Intake)</option>
+                            <option value="critical">Critical Emergency (Immediate 108 Dispatch)</option>
+                            <option value="low">Low / Routine Outpatient Referral</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="ref_specialist_dept" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Required Medical Specialty / Department
+                    </label>
+                    <input type="text" id="ref_specialist_dept" name="specialist_dept" placeholder="e.g. Cardiology, Intensive Care, Pediatric Surgery, Orthopedics"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="ref_reason" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Clinical Referral Reason <span style="color: var(--red);">*</span>
+                    </label>
+                    <input type="text" id="ref_reason" name="reason" required placeholder="e.g. Severe respiratory distress requiring mechanical ventilation"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="ref_notes" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Initial Diagnostic Notes & Treatment Administered
+                    </label>
+                    <textarea id="ref_notes" name="notes" rows="3" placeholder="Vitals at presentation, emergency stabilization medications given, IV fluids administered..."
+                              style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-2);">
+                    <button type="button" onclick="closeCreateReferralModal()" class="btn" style="padding: 10px 18px; background: var(--bg); color: var(--navy); border: 1px solid var(--line); border-radius: var(--radius); font-weight: 600; font-size: var(--fs-sm); cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn" style="padding: 10px 24px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; box-shadow: var(--shadow-sm);">
+                        Dispatch Referral
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="update-status-modal" style="display: none;">
+    <div class="modal-dialog" style="max-width: 520px;">
+        <div class="modal-card" style="padding: var(--sp-6); width: 100%; max-width: 520px; box-sizing: border-box;">
+            <div class="modal-header" style="margin-bottom: var(--sp-4);">
+                <h3 class="modal-title" id="update-modal-title" style="margin: 0; color: var(--navy); font-size: 1.25rem; font-weight: 700;">
+                    Manage Referral Progression
+                </h3>
+                <button type="button" class="modal-close" onclick="closeUpdateStatusModal()" aria-label="Close modal" style="font-size: 20px; font-weight: 700; color: var(--muted);">&times;</button>
+            </div>
+
+            <form method="POST" id="update-status-form" action="" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; font-size: var(--fs-xs); color: var(--navy);">
+                    <div><strong>Patient:</strong> <span id="modal-patient-name">--</span></div>
+                    <div style="margin-top: 2px;"><strong>Destination:</strong> <span id="modal-dest-center">--</span></div>
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="modal_new_status" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Update Progression Status <span style="color: var(--red);">*</span>
+                    </label>
+                    <select id="modal_new_status" name="status" required onchange="handleStatusChange(this.value)" style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--blue); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none;">
+                        <option value="accepted">Accepted by Receiving Facility</option>
+                        <option value="in_transit">Ambulance Dispatched / In-Transit</option>
+                        <option value="completed">Patient Arrived & Admitted / Completed</option>
+                        <option value="counter_referred">Counter-Refer Back to PHC (Discharge)</option>
+                        <option value="rejected">Decline / Cannot Accommodate</option>
+                    </select>
+                </div>
+
+                <div id="ambulance-select-group" class="field" style="display: none; flex-direction: column; gap: 4px;">
+                    <label for="modal_vehicle_id" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Assign Ambulance Transport
+                    </label>
+                    <select id="modal_vehicle_id" name="vehicle_id" style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none;">
+                        <option value="">-- Select Active Ambulance --</option>
+                        {% for amb in ambulances %}
+                        <option value="{{ amb.id }}">{{ amb.id }} - Driver: {{ amb.driver_name or 'On-Duty' }} ({{ amb.driver_phone or '108' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="counter-advice-group" class="field" style="display: none; flex-direction: column; gap: 4px;">
+                    <label for="modal_counter_advice" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Hospital Discharge Advice & Counter-Referral Instructions
+                    </label>
+                    <textarea id="modal_counter_advice" name="counter_advice" rows="3" placeholder="Specialist discharge summary, medications to continue at PHC, scheduled follow-up dates..."
+                              style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box; resize: vertical;"></textarea>
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="modal_notes" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        Transition Notes & Observations
+                    </label>
+                    <textarea id="modal_notes" name="notes" rows="2" placeholder="Clinical condition upon transfer, ETA, attending doctor name..."
+                              style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-2);">
+                    <button type="button" onclick="closeUpdateStatusModal()" class="btn" style="padding: 10px 18px; background: var(--bg); color: var(--navy); border: 1px solid var(--line); border-radius: var(--radius); font-weight: 600; font-size: var(--fs-sm); cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn" style="padding: 10px 24px; background: var(--navy); color: #fff; border: none; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; box-shadow: var(--shadow-sm);">
+                        Save Status
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openCreateReferralModal() {
+    const modal = document.getElementById('create-referral-modal');
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+}
+
+function closeCreateReferralModal() {
+    const modal = document.getElementById('create-referral-modal');
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+}
+
+function openUpdateStatusModal(refId, currentStatus, patName, destCenter) {
+    document.getElementById('update-status-form').action = '/phc/referrals/' + refId + '/update-status';
+    document.getElementById('update-modal-title').textContent = 'Manage Referral REF-' + refId;
+    document.getElementById('modal-patient-name').textContent = patName;
+    document.getElementById('modal-dest-center').textContent = destCenter;
+
+    const statusSelect = document.getElementById('modal_new_status');
+    statusSelect.value = currentStatus === 'initiated' ? 'accepted' : currentStatus;
+    handleStatusChange(statusSelect.value);
+
+    const modal = document.getElementById('update-status-modal');
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+}
+
+function closeUpdateStatusModal() {
+    const modal = document.getElementById('update-status-modal');
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+}
+
+function handleStatusChange(status) {
+    const ambGroup = document.getElementById('ambulance-select-group');
+    const counterGroup = document.getElementById('counter-advice-group');
+
+    if (status === 'in_transit') {
+        ambGroup.style.display = 'flex';
+        counterGroup.style.display = 'none';
+    } else if (status === 'counter_referred') {
+        ambGroup.style.display = 'none';
+        counterGroup.style.display = 'flex';
+    } else {
+        ambGroup.style.display = 'none';
+        counterGroup.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

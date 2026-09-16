@@ -1,0 +1,545 @@
+{% extends "shell.html" %}
+{% block page_title %}Healthcare Facility Network Map{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+.leaflet-popup-content-wrapper {
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+.filter-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink);
+}
+.filter-chip.active, .filter-chip:hover {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+}
+.facility-quick-card {
+    padding: var(--sp-3);
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.facility-quick-card:hover, .facility-quick-card.selected {
+    border-color: var(--blue);
+    background: var(--sky);
+    transform: translateY(-2px);
+}
+.user-loc-pulse {
+    width: 22px;
+    height: 22px;
+    background: #0284c7;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 rgba(2, 132, 199, 0.6);
+    animation: pulse-ring 1.8s infinite;
+    cursor: grab;
+}
+@keyframes pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 16px rgba(2, 132, 199, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(2, 132, 199, 0);
+    }
+}
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+{% if current_user %}
+    {% if current_user.role == 'patient' %}{% include "patient/_nav.html" %}
+    {% elif current_user.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist') %}{% include "phc/_nav.html" %}
+    {% elif current_user.role == 'region_admin' %}{% include "admin/_nav.html" %}
+    {% elif current_user.role == 'system_admin' %}{% include "admin/_nav.html" %}
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% set initial_fac = facilities[0] if facilities else None %}
+<div class="page-header" style="margin-bottom: var(--sp-4); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-4);">
+    <div>
+        <h1 style="margin: 0 0 4px; font-size: var(--fs-xl); color: var(--navy); font-weight: 700;">Healthcare Facility Network Map</h1>
+        <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">
+            Locate nearest primary health centres, community hospitals, and emergency triage points
+        </p>
+    </div>
+    <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+        <button type="button" id="get-location-btn" onclick="getUserLocation()" class="btn" style="background: var(--blue); color: #fff; font-weight: 600; padding: 8px 16px; border-radius: var(--radius);">
+            Get GPS Location
+        </button>
+        <button type="button" id="pin-mode-btn" onclick="togglePinMode()" class="btn outline" style="padding: 8px 14px; border-radius: var(--radius);">
+            Click Map to Pin Location
+        </button>
+        {% if current_user and current_user.role == 'patient' %}
+            <a href="/patient/@{{ current_user.username }}" class="btn outline" style="padding: 8px 16px;">Dashboard</a>
+        {% endif %}
+    </div>
+</div>
+
+<div id="location-status-banner" style="display: none; padding: 10px 16px; border-radius: var(--radius); margin-bottom: var(--sp-4); font-size: var(--fs-sm); background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; align-items: center; justify-content: space-between;">
+    <span id="location-status-text">Detecting your location...</span>
+    <button type="button" onclick="document.getElementById('location-status-banner').style.display='none'" style="background:none; border:none; color:#0369a1; cursor:pointer; font-weight:bold;">&times;</button>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4);">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="type-filters">
+        <button class="filter-chip active" onclick="filterType('ALL', this)">All Centres ({{ facilities|length }})</button>
+        <button class="filter-chip" onclick="filterType('PHC', this)">Primary Care (PHC)</button>
+                <button class="filter-chip" onclick="filterType('DH', this)">District Hospital (DH)</button>
+        <button class="filter-chip" onclick="filterType('Dispensary', this)">Dispensaries</button>
+    </div>
+
+    <div>
+        <select id="facility-select" onchange="selectFacility(this.value)" style="padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-xs); background: var(--white); color: var(--navy); font-weight: 600;">
+            <option value="">Select a facility</option>
+            {% for fac in facilities %}
+                <option value="{{ fac.id }}" {% if selected_facility_id == fac.id %}selected{% endif %}>
+                    {{ fac.name }} ({{ fac.type }} - {{ fac.id }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="panel" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); margin-bottom: var(--sp-6); box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+    <div id="facilities-map" style="width: 100%; height: 500px; background: #e5e9ec; cursor: crosshair;"></div>
+</div>
+
+<div class="panel" id="selected-facility-card" style="border: 2px solid var(--blue); background: var(--white); margin-bottom: var(--sp-6); scroll-margin-top: 80px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--sp-4); margin-bottom: var(--sp-4);">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <h2 id="fac-name" style="margin: 0; color: var(--navy); font-size: 1.4rem;">Select a Facility</h2>
+                <span id="fac-type-badge" style="background: var(--sky); color: var(--navy); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                    PHC
+                </span>
+                <span id="fac-distance-badge" style="display: none; background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                    Distance calculating...
+                </span>
+                <span id="fac-status-badge" style="background: rgba(42, 157, 143, 0.15); color: #2a9d8f; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                    Operational 24/7
+                </span>
+            </div>
+            <p id="fac-region" style="margin: 0; font-size: var(--fs-sm); color: var(--muted);">
+                Click any marker on the map above or choose from the list to view comprehensive facility details.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;" id="fac-actions">
+            <a id="fac-call-btn" href="tel:{{ initial_fac.phone|replace(' ', '') if (initial_fac and initial_fac.phone) else '104' }}" class="btn outline">Call Facility</a>
+            <a id="fac-directions-btn" href="#" target="_blank" class="btn" style="background: var(--blue); color: #fff;">
+                Get Directions
+            </a>
+            {% if current_user and current_user.role != 'patient' %}
+                <a id="fac-profile-btn" href="/facilities/{{ initial_fac.id if initial_fac else '' }}" class="btn outline">View Administrative Details</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--line);">
+        <div style="background: var(--bg); padding: var(--sp-3); border-radius: var(--radius); border: 1px solid var(--line);">
+            <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600;">Facility Code / ID</div>
+            <div id="fac-id" style="font-size: var(--fs-md); font-weight: 700; color: var(--navy); font-family: var(--mono); margin-top: 2px;">
+                {{ initial_fac.id if initial_fac else '-' }}
+            </div>
+        </div>
+
+        <div style="background: var(--bg); padding: var(--sp-3); border-radius: var(--radius); border: 1px solid var(--line);">
+            <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600;">Location Coordinates</div>
+            <div id="fac-coords" style="font-size: var(--fs-sm); font-weight: 600; color: var(--ink); font-family: var(--mono); margin-top: 2px;">
+                {% if initial_fac and initial_fac.lat and initial_fac.lng %}
+                    {{ initial_fac.lat|round(4) }} N, {{ initial_fac.lng|round(4) }} E
+                {% else %}
+                    -
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="background: var(--bg); padding: var(--sp-3); border-radius: var(--radius); border: 1px solid var(--line);">
+            <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600;">Emergency Helpline</div>
+            <div id="fac-phone" style="font-size: var(--fs-sm); font-weight: 700; color: var(--navy); margin-top: 2px;">
+                {{ initial_fac.phone or 'Contact not available' }}
+            </div>
+        </div>
+
+        <div style="background: var(--bg); padding: var(--sp-3); border-radius: var(--radius); border: 1px solid var(--line);">
+            <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600;">Available Services</div>
+            <div id="fac-services" style="font-size: var(--fs-xs); font-weight: 600; color: var(--ink); margin-top: 2px;">
+                General OPD, Emergency Care, Immunization, Teleconsultation
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);">Regional Facilities Directory</h3>
+        <span id="proximity-sort-note" style="display: none; font-size: var(--fs-xs); color: var(--green); font-weight: 600;">Sorted by distance from your pinned location</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-4);" id="facilities-grid">
+        {% for fac in facilities %}
+        <div class="facility-quick-card" id="card-{{ fac.id }}" data-fac-id="{{ fac.id }}" onclick="selectFacility('{{ fac.id }}')">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ fac.name }}</strong>
+                <span style="background: var(--sky); color: var(--navy); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                    {{ fac.type }}
+                </span>
+            </div>
+            <div style="font-size: var(--fs-xs); color: var(--muted); margin-bottom: 6px;">
+                {{ fac.district or fac.region }}, {{ fac.state or 'Gujarat' }} - ID: <span style="font-family: var(--mono);">{{ fac.id }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <span class="card-dist-label" style="color: var(--green); font-weight: 600;">Active</span>
+                <span style="color: var(--blue); font-weight: 600;">Center on Map</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+const rawFacilities = {{ facilities|tojson }};
+const initialSelectedId = {{ (selected_facility_id or '')|tojson }};
+
+let map;
+let markers = {};
+let currentFilter = 'ALL';
+let userLocationMarker = null;
+let userLocationCircle = null;
+let userCoords = null;
+let pinModeActive = false;
+
+function initMap() {
+    map = L.map('facilities-map').setView([22.5530, 72.9300], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    const typeColors = {
+        'PHC': '#0369a1',
+        
+        'DH': '#dc2626',
+        'Dispensary': '#b45309',
+        'SubCentre': '#6d28d9'
+    };
+
+    rawFacilities.forEach(fac => {
+        const lat = parseFloat(fac.lat);
+        const lng = parseFloat(fac.lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const color = typeColors[fac.type] || '#1479a9';
+        const customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="background-color:${color}; width:24px; height:24px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:bold;">+</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+
+        marker.bindPopup(`
+            <div style="font-family:sans-serif; padding:4px;">
+                <strong style="color:#123b54; font-size:13px;">${fac.name}</strong><br>
+                <span style="display:inline-block; margin-top:2px; font-size:10px; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:600;">${fac.type} - ${fac.id}</span>
+                <p style="margin:6px 0 8px; font-size:11px; color:#647a86; line-height:1.3;">${fac.address}</p>
+                <div style="display:flex; gap:6px;">
+                    <button onclick="selectFacility('${fac.id}')" style="background:#1479a9; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:600;">Select</button>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="background:#f1f5f9; color:#18313f; text-decoration:none; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:600; border:1px solid #cbd5e1;">Navigate</a>
+                </div>
+            </div>
+        `);
+
+        marker.on('click', () => {
+            selectFacility(fac.id);
+        });
+
+        markers[fac.id] = { marker, data: fac };
+    });
+
+    map.on('click', function(e) {
+        setUserLocation(e.latlng.lat, e.latlng.lng, 'Pinned manually on map');
+    });
+
+    if (initialSelectedId && markers[initialSelectedId]) {
+        selectFacility(initialSelectedId);
+    } else if (rawFacilities.length > 0) {
+        selectFacility(rawFacilities[0].id);
+    }
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
+
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function togglePinMode() {
+    pinModeActive = !pinModeActive;
+    const btn = document.getElementById('pin-mode-btn');
+    const banner = document.getElementById('location-status-banner');
+    const text = document.getElementById('location-status-text');
+
+    if (pinModeActive) {
+        btn.style.background = 'var(--blue)';
+        btn.style.color = '#fff';
+        banner.style.display = 'flex';
+        banner.style.background = '#fef3c7';
+        banner.style.color = '#b45309';
+        banner.style.borderColor = '#fde68a';
+        text.innerText = 'Click anywhere on the map to place or move your exact location pin.';
+    } else {
+        btn.style.background = '';
+        btn.style.color = '';
+    }
+}
+
+function setUserLocation(lat, lng, sourceLabel) {
+    userCoords = { lat: lat, lng: lng };
+    const banner = document.getElementById('location-status-banner');
+    const text = document.getElementById('location-status-text');
+
+    if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+    }
+    if (userLocationCircle) {
+        map.removeLayer(userLocationCircle);
+    }
+
+    const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: '<div class="user-loc-pulse" title="Drag to adjust"></div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+    });
+
+    userLocationMarker = L.marker([lat, lng], { icon: userIcon, draggable: true }).addTo(map);
+    userLocationMarker.bindPopup(`
+        <strong style="color:#0284c7;">Your Location</strong><br>
+        <span style="font-size:11px; color:#647a86;">${lat.toFixed(4)} N, ${lng.toFixed(4)} E</span><br>
+        <span style="font-size:10px; color:#15803d; font-weight:600;">(Drag to fine-tune)</span>
+    `).openPopup();
+
+    userLocationMarker.on('dragend', function(e) {
+        const pos = e.target.getLatLng();
+        setUserLocation(pos.lat, pos.lng, 'Adjusted marker location');
+    });
+
+    userLocationCircle = L.circle([lat, lng], {
+        radius: 120,
+        color: '#0284c7',
+        fillColor: '#38bdf8',
+        fillOpacity: 0.12,
+        weight: 1.5
+    }).addTo(map);
+
+    let closestFac = null;
+    let minDistance = Infinity;
+
+    rawFacilities.forEach(fac => {
+        const facLat = parseFloat(fac.lat);
+        const facLng = parseFloat(fac.lng);
+        if (!isNaN(facLat) && !isNaN(facLng)) {
+            const dist = calculateDistanceKm(lat, lng, facLat, facLng);
+            fac.distance_km = dist;
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestFac = fac;
+            }
+        }
+    });
+
+    banner.style.display = 'flex';
+    banner.style.background = '#dcfce7';
+    banner.style.color = '#15803d';
+    banner.style.borderColor = '#bbf7d0';
+    text.innerText = `${sourceLabel || 'Location set'} (${lat.toFixed(4)} N, ${lng.toFixed(4)} E). Nearest: ${closestFac ? closestFac.name : ''} (${minDistance.toFixed(1)} km).`;
+
+    document.getElementById('proximity-sort-note').style.display = 'inline';
+    sortAndRenderFacilityCards();
+
+    if (closestFac) {
+        selectFacility(closestFac.id);
+    }
+}
+
+function getUserLocation() {
+    const banner = document.getElementById('location-status-banner');
+    const text = document.getElementById('location-status-text');
+    const btn = document.getElementById('get-location-btn');
+
+    if (!navigator.geolocation) {
+        banner.style.display = 'flex';
+        banner.style.background = '#fee2e2';
+        banner.style.color = '#dc2626';
+        banner.style.borderColor = '#fecaca';
+        text.innerText = 'Geolocation is not supported by your current browser. You can click on the map to pin your location.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'Requesting GPS...';
+    banner.style.display = 'flex';
+    banner.style.background = '#e0f2fe';
+    banner.style.color = '#0369a1';
+    banner.style.borderColor = '#bae6fd';
+    text.innerText = 'Acquiring high-accuracy GPS coordinates...';
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            btn.disabled = false;
+            btn.innerText = 'GPS Updated';
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            setUserLocation(userLat, userLng, 'GPS Location detected');
+            map.setView([userLat, userLng], 14);
+        },
+        (error) => {
+            btn.disabled = false;
+            btn.innerText = 'Get GPS Location';
+            banner.style.background = '#fee2e2';
+            banner.style.color = '#dc2626';
+            banner.style.borderColor = '#fecaca';
+
+            let msg = 'Unable to retrieve GPS location.';
+            if (error.code === error.PERMISSION_DENIED) {
+                msg = 'Location permission was denied. You can click anywhere on the map to set your location pin.';
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+                msg = 'GPS signal unavailable. You can click anywhere on the map to pin your location.';
+            } else if (error.code === error.TIMEOUT) {
+                msg = 'GPS request timed out. Please click on the map to pin your location directly.';
+            }
+            text.innerText = msg;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+function sortAndRenderFacilityCards() {
+    const grid = document.getElementById('facilities-grid');
+    const cards = Array.from(grid.getElementsByClassName('facility-quick-card'));
+
+    cards.sort((a, b) => {
+        const idA = a.getAttribute('data-fac-id');
+        const idB = b.getAttribute('data-fac-id');
+        const facA = rawFacilities.find(f => f.id === idA);
+        const facB = rawFacilities.find(f => f.id === idB);
+        const distA = (facA && typeof facA.distance_km === 'number') ? facA.distance_km : 9999;
+        const distB = (facB && typeof facB.distance_km === 'number') ? facB.distance_km : 9999;
+        return distA - distB;
+    });
+
+    cards.forEach(card => {
+        const facId = card.getAttribute('data-fac-id');
+        const fac = rawFacilities.find(f => f.id === facId);
+        if (fac && typeof fac.distance_km === 'number') {
+            const distLabel = card.querySelector('.card-dist-label');
+            if (distLabel) {
+                distLabel.innerText = `${fac.distance_km.toFixed(1)} km away`;
+                distLabel.style.color = 'var(--blue)';
+            }
+        }
+        grid.appendChild(card);
+    });
+}
+
+function selectFacility(id) {
+    if (!id || !markers[id]) return;
+
+    const { marker, data } = markers[id];
+
+    document.querySelectorAll('.facility-quick-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById(`card-${id}`);
+    if (card) card.classList.add('selected');
+
+    document.getElementById('facility-select').value = id;
+
+    document.getElementById('fac-name').innerText = data.name;
+    document.getElementById('fac-id').innerText = data.id;
+    document.getElementById('fac-type-badge').innerText = data.type;
+    document.getElementById('fac-coords').innerText = `${parseFloat(data.lat).toFixed(4)} N, ${parseFloat(data.lng).toFixed(4)} E`;
+    document.getElementById('fac-phone').innerText = data.phone || '+91 2692 236104';
+    document.getElementById('fac-region').innerText = `${data.address} - Region: ${data.region || 'Anand'}`;
+
+    const distBadge = document.getElementById('fac-distance-badge');
+    if (data.distance_km !== undefined) {
+        distBadge.style.display = 'inline-block';
+        distBadge.innerText = `${data.distance_km.toFixed(1)} km away from you`;
+    } else {
+        distBadge.style.display = 'none';
+    }
+
+    document.getElementById('fac-call-btn').href = `tel:${data.phone ? data.phone.replace(/[^0-9+]/g, '') : '104'}`;
+    
+    let destUrl;
+    if (userCoords) {
+        destUrl = `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${data.lat},${data.lng}`;
+    } else {
+        destUrl = `https://www.google.com/maps/dir/?api=1&destination=${data.lat},${data.lng}`;
+    }
+    document.getElementById('fac-directions-btn').href = destUrl;
+
+    const profileBtn = document.getElementById('fac-profile-btn');
+    if (profileBtn) {
+        profileBtn.href = `/facilities/${data.id}`;
+    }
+
+    if (!userCoords) {
+        map.setView([parseFloat(data.lat), parseFloat(data.lng)], 15);
+    }
+    marker.openPopup();
+}
+
+function filterType(type, btn) {
+    currentFilter = type;
+    document.querySelectorAll('#type-filters button').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    rawFacilities.forEach(fac => {
+        const item = markers[fac.id];
+        const card = document.getElementById(`card-${fac.id}`);
+        if (!item) return;
+
+        if (type === 'ALL' || fac.type === type) {
+            item.marker.addTo(map);
+            if (card) card.style.display = 'block';
+        } else {
+            map.removeLayer(item.marker);
+            if (card) card.style.display = 'none';
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}
