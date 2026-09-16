@@ -150,10 +150,15 @@ def execute_db(query, args=(), retries=1):
                 cur.execute(query, args)
                 g.db_conn.commit()
 
-            # Automatic Cache Invalidation on DB mutations
+            # Automatic Cache Invalidation on meaningful DB mutations
             try:
-                from utils.cache import invalidate_cache
-                invalidate_cache()
+                table_match = re.search(r"^(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+([a-zA-Z0-9_]+)", stripped, re.IGNORECASE)
+                mutated_table = table_match.group(1).lower() if table_match else ""
+                
+                ignored_tables = {"audit_logs", "notifications", "system_events", "access_logs", "login_attempts"}
+                if mutated_table not in ignored_tables:
+                    from utils.cache import invalidate_cache
+                    invalidate_cache()
             except Exception:
                 pass
 

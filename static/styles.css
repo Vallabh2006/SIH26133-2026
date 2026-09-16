@@ -66,8 +66,6 @@
 
 html {
   font-size: 16px;
-  max-width: 100%;
-  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -78,11 +76,8 @@ body {
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
-  max-width: 100%;
-  overflow-x: hidden;
+  min-height: 100vh;
   position: relative;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
 }
 
 a {
@@ -275,8 +270,9 @@ tbody tr:hover {
   top: 0;
   left: 0;
   bottom: 0;
-  height: 100vh;
-  max-height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100%;
   z-index: 200;
   transition: width var(--duration-slow) var(--ease), transform var(--duration-slow) var(--ease);
   overflow: hidden;
@@ -435,9 +431,13 @@ tbody tr:hover {
 }
 
 .sidebar-footer {
+  flex-shrink: 0;
   padding: var(--sp-3) var(--sp-4);
+  padding-bottom: max(var(--sp-4), env(safe-area-inset-bottom, 16px));
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  position: relative;
+  z-index: 10;
 }
 
 .user-chip {
@@ -1687,8 +1687,9 @@ tbody tr:hover {
     top: 0;
     left: 0;
     bottom: 0;
-    height: 100vh;
-    max-height: 100vh;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100%;
     width: 280px;
     max-width: 85vw;
     z-index: 500;
@@ -2130,16 +2131,13 @@ input[type="submit"][disabled] {
   transition: opacity 0.12s ease-in-out;
 }
 
-/* Background Page Scroll Lock when Sidebar or Drawer is Open */
+/* Background Page Scroll Lock ONLY when Sidebar is Open */
 html.sidebar-open,
 body.sidebar-open {
   overflow: hidden !important;
   height: 100% !important;
-  touch-action: none !important;
-  overscroll-behavior: none !important;
 }
 
-.sidebar-backdrop {
-  touch-action: none;
-  overscroll-behavior: none;
+.sidebar-open .main-content {
+  pointer-events: none;
 }

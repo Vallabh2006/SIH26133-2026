@@ -1,10 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ _('errors.500_title') }}{% endblock %}
+{% block title %}Oops! Something went wrong - {{ _('app.name') }}{% endblock %}
 {% block body %}
-<div style="display:flex; align-items:center; justify-content:center; min-height:100vh; flex-direction:column; text-align:center; padding: var(--sp-8);">
-    <h1 style="font-size: 4rem; color: var(--red); margin-bottom: var(--sp-4);">500</h1>
-    <h2 style="margin-bottom: var(--sp-4);">{{ _('errors.500_title') }}</h2>
-    <p style="color: var(--muted); margin-bottom: var(--sp-6);">{{ _('errors.500_desc') }}</p>
-    <a href="/" class="btn">{{ _('errors.return_home') }}</a>
+<div style="display:flex; align-items:center; justify-content:center; min-height:100vh; flex-direction:column; text-align:center; padding: var(--sp-8); box-sizing: border-box;">
+    <div style="font-size: 50px; margin-bottom: var(--sp-3);">&#9888;&#65039;</div>
+    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--navy); margin-bottom: var(--sp-2);">Oops! Something went wrong</h2>
+    <p style="color: var(--muted); max-width: 400px; margin-bottom: var(--sp-6); font-size: var(--fs-sm); line-height: 1.5;">
+        An unexpected error occurred while loading this page. Please tap below to restart the application.
+    </p>
+    <a href="/" class="btn" style="background: var(--blue); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none;">
+        &#128260; Restart App
+    </a>
 </div>
 {% endblock %}

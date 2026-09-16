@@ -32,6 +32,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebHistoryItem;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -83,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
     private String cameraPhotoPath;
 
     private GeolocationPermissions.Callback geolocationCallback;
+    private volatile boolean isSidebarOpen = false;
     private String geolocationOrigin;
 
     private final ActivityResultLauncher<String[]> requestPermissionsLauncher =
@@ -158,16 +160,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Ensure SwipeRefreshLayout never intercepts touch when scrolling web content
+        // Ensure SwipeRefreshLayout never intercepts touch when scrolling web content or sidebar
         swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> {
+            if (isSidebarOpen) {
+                return true;
+            }
             return webView.canScrollVertically(-1) || webView.getScrollY() > 0;
         });
 
-        btnRetry.setOnClickListener(v -> {
-            String url = prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
-            hideOffline();
-            loadUrlWithTimeout(url);
-        });
+        btnRetry.setOnClickListener(v -> restartApp());
 
         btnChangeUrl.setOnClickListener(v -> showServerUrlDialog());
     }
@@ -279,13 +280,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-                swipeRefreshLayout.setEnabled(scrollY == 0 && !webView.canScrollVertically(-1));
-            });
-        }
+
 
         if (isNetworkAvailable()) {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -309,30 +306,51 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void navigateBackOrExit() {
-        if (webView.canGoBack()) {
-            WebBackForwardList history = webView.copyBackForwardList();
-            int currentIndex = history.getCurrentIndex();
-            
-            if (currentIndex > 0) {
-                WebHistoryItem currentItem = history.getItemAtIndex(currentIndex);
-                WebHistoryItem prevItem = history.getItemAtIndex(currentIndex - 1);
-                
-                String currentUrl = currentItem != null ? currentItem.getUrl() : "";
-                String prevUrl = prevItem != null ? prevItem.getUrl() : "";
-                
-                // If previous page is login/redirect and user is on target page, jump 2 back
-                if (currentUrl.contains("/admin/@") || currentUrl.contains("/patient/@") || currentUrl.contains("/phc/@")) {
-                    if (prevUrl.endsWith("/login") || prevUrl.endsWith("/app") || prevUrl.contains("/auth/")) {
-                        if (currentIndex > 1) {
-                            webView.goBackOrForward(-2);
-                            return;
-                        }
-                    }
-                }
+    private boolean isDashboardOrHome(String url) {
+        if (url == null || url.isEmpty()) return true;
+        try {
+            Uri uri = Uri.parse(url);
+            String path = uri.getPath();
+            if (path == null || path.isEmpty() || path.equals("/") || path.equals("/home") || path.equals("/app")) {
+                return true;
             }
-            webView.goBack();
-        } else {
+            if (path.matches("^/phc/@[^/]+/?$") ||
+                path.matches("^/patient/@[^/]+/?$") ||
+                path.matches("^/admin/@[^/]+/?$") ||
+                path.matches("^/admin/dashboard/?$")) {
+                return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private boolean isAuthOrRedirectUrl(String url) {
+        if (url == null || url.isEmpty()) return false;
+        try {
+            Uri uri = Uri.parse(url);
+            String path = uri.getPath();
+            if (path == null) return false;
+            return path.startsWith("/auth/") ||
+                   path.equals("/login") ||
+                   path.equals("/admin-login") ||
+                   path.equals("/phc-login") ||
+                   path.equals("/signup") ||
+                   path.equals("/app");
+        } catch (Exception ignored) {}
+        return url.contains("/auth/") || url.contains("/login") || url.endsWith("/app");
+    }
+
+    private void navigateBackOrExit() {
+        if (isSidebarOpen) {
+            isSidebarOpen = false;
+            webView.evaluateJavascript("if (typeof toggleSidebar === 'function') { toggleSidebar(false); }", null);
+            return;
+        }
+
+        String currentUrl = webView.getUrl();
+        if (currentUrl == null) currentUrl = "";
+
+        if (isDashboardOrHome(currentUrl)) {
             long now = System.currentTimeMillis();
             if (now - lastBackPressedTime < 2000) {
                 finish();
@@ -340,7 +358,33 @@ public class MainActivity extends AppCompatActivity {
                 lastBackPressedTime = now;
                 Toast.makeText(MainActivity.this, "Press back again to exit", Toast.LENGTH_SHORT).show();
             }
+            return;
         }
+
+        if (webView.canGoBack()) {
+            WebBackForwardList history = webView.copyBackForwardList();
+            int currentIndex = history.getCurrentIndex();
+            int targetOffset = 0;
+
+            for (int i = currentIndex - 1; i >= 0; i--) {
+                WebHistoryItem item = history.getItemAtIndex(i);
+                if (item != null) {
+                    String itemUrl = item.getUrl();
+                    if (!isAuthOrRedirectUrl(itemUrl)) {
+                        targetOffset = i - currentIndex;
+                        break;
+                    }
+                }
+            }
+
+            if (targetOffset < 0) {
+                webView.goBackOrForward(targetOffset);
+                return;
+            }
+        }
+
+        String defaultUrl = prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
+        loadUrlWithTimeout(defaultUrl);
     }
 
     @Override
@@ -355,6 +399,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    private void restartApp() {
+        hideOffline();
+        progressBar.setVisibility(View.VISIBLE);
+        String url = prefs.getString(KEY_SERVER_URL, DEFAULT_HTTP_URL);
+        try {
+            webView.stopLoading();
+            webView.clearHistory();
+        } catch (Exception ignored) {}
+        loadUrlWithTimeout(url);
     }
 
     private void showOffline() {
@@ -399,10 +454,20 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void setSidebarOpen(boolean open) {
+            runOnUiThread(() -> {
+                isSidebarOpen = open;
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setEnabled(!open);
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void setSwipeRefreshEnabled(boolean enabled) {
             runOnUiThread(() -> {
                 if (swipeRefreshLayout != null) {
-                    swipeRefreshLayout.setEnabled(enabled);
+                    swipeRefreshLayout.setEnabled(enabled && !isSidebarOpen);
                 }
             });
         }
@@ -480,7 +545,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
             progressBar.setVisibility(View.GONE);
-            swipeRefreshLayout.setRefreshing(false);
+            isSidebarOpen = false;
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.setRefreshing(false);
+                swipeRefreshLayout.setEnabled(true);
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 CookieManager.getInstance().flush();
             }
@@ -493,8 +562,26 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-            if (request.isForMainFrame()) {
+            if (request != null && request.isForMainFrame()) {
                 pageLoadedSuccessfully = false;
+                cancelTimeout();
+                runOnUiThread(MainActivity.this::showOffline);
+            }
+        }
+
+        @Override
+        public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+            pageLoadedSuccessfully = false;
+            cancelTimeout();
+            runOnUiThread(MainActivity.this::showOffline);
+        }
+
+        @Override
+        public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+            if (request != null && request.isForMainFrame() && errorResponse != null && errorResponse.getStatusCode() >= 500) {
+                pageLoadedSuccessfully = false;
+                cancelTimeout();
+                runOnUiThread(MainActivity.this::showOffline);
             }
         }
 

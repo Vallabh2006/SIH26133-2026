@@ -1,0 +1,10 @@
+{
+  "name": "anvaya-vistara",
+  "version": "1.0.3",
+  "private": true,
+  "description": "Anvaya Vistara Healthcare Platform",
+  "scripts": {
+    "build": "echo 'Build successful'",
+    "deploy": "wrangler deploy"
+  }
+}

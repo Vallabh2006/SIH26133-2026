@@ -1,3 +1,42 @@
+
+// Synchronize Swipe Refresh & Sidebar state with Native Android Bridge in real time
+function syncSwipeRefreshState(touchTarget) {
+  const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar');
+  const isSidebarOpen = !!((sidebar && sidebar.classList.contains('open')) ||
+                          document.body.classList.contains('sidebar-open') ||
+                          document.documentElement.classList.contains('sidebar-open'));
+  
+  const inSidebar = touchTarget ? !!touchTarget.closest('#sidebar, .sidebar, .modal, .sidebar-backdrop') : false;
+  const isAtTop = (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
+  
+  // Swipe refresh is ONLY allowed when:
+  // 1. Sidebar is completely closed
+  // 2. Touch is NOT inside sidebar/modal
+  // 3. User is at the absolute top of the page (scrollY == 0)
+  const canRefresh = !isSidebarOpen && !inSidebar && isAtTop;
+  
+  const bridge = window.AndroidBridge || window.Android;
+  if (bridge) {
+    if (typeof bridge.setSidebarOpen === 'function') bridge.setSidebarOpen(isSidebarOpen);
+    if (typeof bridge.setSwipeRefreshEnabled === 'function') bridge.setSwipeRefreshEnabled(canRefresh);
+  }
+}
+
+window.addEventListener('scroll', () => syncSwipeRefreshState(), { passive: true });
+
+if (typeof MutationObserver !== 'undefined') {
+  const sidebarObserver = new MutationObserver(() => {
+    syncSwipeRefreshState();
+  });
+  if (document.documentElement) sidebarObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  if (document.body) sidebarObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('DOMContentLoaded', () => {
+    const sb = document.getElementById('sidebar');
+    if (sb) sidebarObserver.observe(sb, { attributes: true, attributeFilter: ['class'] });
+    syncSwipeRefreshState();
+  });
+}
+
 const api = {
   async request(url, options = {}) {
     const defaults = {
@@ -302,14 +341,24 @@ function toggleSidebar(forceState) {
   if (!sidebar) return;
 
   const isOpen = forceState !== undefined ? forceState : !sidebar.classList.contains('open');
+  const bridge = window.AndroidBridge || window.Android;
+
   if (isOpen) {
     sidebar.classList.add('open');
     if (backdrop) backdrop.classList.add('show');
     document.documentElement.classList.add('sidebar-open');
     document.body.classList.add('sidebar-open');
     document.body.style.overflow = 'hidden';
-    if (window.AndroidBridge && typeof window.AndroidBridge.setSwipeRefreshEnabled === 'function') {
-      window.AndroidBridge.setSwipeRefreshEnabled(false);
+    syncSwipeRefreshState();
+    if (typeof InstantNav !== 'undefined') {
+      setTimeout(() => {
+        const links = sidebar.querySelectorAll('a[href]');
+        links.forEach(link => {
+          if (typeof InstantNav.isEligibleLink === 'function' && InstantNav.isEligibleLink(link)) {
+            InstantNav.prefetch(link.href);
+          }
+        });
+      }, 50);
     }
   } else {
     sidebar.classList.remove('open');
@@ -317,10 +366,7 @@ function toggleSidebar(forceState) {
     document.documentElement.classList.remove('sidebar-open');
     document.body.classList.remove('sidebar-open');
     document.body.style.overflow = '';
-    if (window.AndroidBridge && typeof window.AndroidBridge.setSwipeRefreshEnabled === 'function') {
-      const isAtTop = (window.scrollY || document.documentElement.scrollTop || 0) === 0;
-      window.AndroidBridge.setSwipeRefreshEnabled(isAtTop);
-    }
+    syncSwipeRefreshState();
   }
 }
 
@@ -362,29 +408,25 @@ document.addEventListener('DOMContentLoaded', () => {
   initNotifications();
   InstantNav.init();
 
-  const toggleBtn = document.getElementById('sidebar-toggle') || document.getElementById('mobileNavToggle');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('#sidebar-toggle, .menu-toggle, #mobileNavToggle, [data-toggle="sidebar"]');
+    if (toggleBtn) {
+      e.preventDefault();
       e.stopPropagation();
       toggleSidebar();
-    });
-  }
-
-  const backdrop = document.getElementById('sidebar-backdrop');
-  if (backdrop) {
-    backdrop.addEventListener('click', () => {
+      return;
+    }
+    const backdrop = e.target.closest('#sidebar-backdrop');
+    if (backdrop) {
+      e.preventDefault();
       toggleSidebar(false);
-    });
-  }
-
-  const navItems = document.querySelectorAll('.sidebar .navitem');
-  navItems.forEach((item) => {
-    item.addEventListener('click', () => {
-      if (window.innerWidth <= 768) {
-        toggleSidebar(false);
-      }
-    });
-  });
+      return;
+    }
+    const navItem = e.target.closest('.sidebar .navitem');
+    if (navItem && window.innerWidth <= 768) {
+      toggleSidebar(false);
+    }
+  }, true);
 });
 
 
@@ -395,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const actionUrl = form.getAttribute("action") || window.location.pathname;
     const throttled = checkClientThrottling(actionUrl);
-    if (typeof InstantNav !== "undefined") {
+    if (typeof InstantNav !== "undefined" && form.method && form.method.toUpperCase() === "POST") {
       InstantNav.clearCache();
     }
 
@@ -431,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Instant Navigation (Fast-Swap / Pjax) Engine with Touchstart Prefetching
 const InstantNav = (function () {
   const _cache = new Map();
-  const CACHE_TTL_MS = 60000;
+  const CACHE_TTL_MS = 180000;
   let _progressBar = null;
   let _progressTimer = null;
   let _currentFetchController = null;
@@ -494,22 +536,27 @@ const InstantNav = (function () {
     }
   }
 
+  let _activePrefetchUrl = null;
+
   async function prefetch(url) {
     try {
       const cleanUrl = new URL(url, window.location.origin).href;
+      if (_activePrefetchUrl === cleanUrl) return;
       const cached = _cache.get(cleanUrl);
       if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
         return;
       }
+      _activePrefetchUrl = cleanUrl;
       const res = await fetch(cleanUrl, {
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-Instant-Nav': 'true' },
         credentials: 'same-origin'
       });
+      _activePrefetchUrl = null;
       if (!res.ok) return;
       const html = await res.text();
       _cache.set(cleanUrl, { html, timestamp: Date.now() });
     } catch (e) {
-      // Ignore prefetch network errors
+      _activePrefetchUrl = null;
     }
   }
 
@@ -631,6 +678,9 @@ const InstantNav = (function () {
   }
 
   function init() {
+    document.documentElement.classList.remove('sidebar-open');
+    document.body.classList.remove('sidebar-open');
+    document.body.style.overflow = '';
     // Touchstart / Pointerenter prefetching for 0ms transitions
     document.addEventListener('pointerenter', (e) => {
       const link = e.target.closest('a');
@@ -640,6 +690,7 @@ const InstantNav = (function () {
     }, { passive: true, capture: true });
 
     document.addEventListener('touchstart', (e) => {
+      syncSwipeRefreshState(e.target);
       const link = e.target.closest('a');
       if (isEligibleLink(link)) {
         prefetch(link.href);
