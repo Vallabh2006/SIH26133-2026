@@ -6,7 +6,7 @@ import json
 import re
 from flask import Flask, render_template, redirect, url_for, session, jsonify, request, flash, abort, g, send_from_directory
 from flask_session import Session
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -131,7 +131,7 @@ def create_app(config_name=None):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
-        if not app.debug:
+        if not app.debug and request.is_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
@@ -682,6 +682,12 @@ def create_app(config_name=None):
         return render_template("errors/500.html"), 500
 
 
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        flash('Session expired or security token invalid. Please try logging in again.', 'warning')
+        return redirect(url_for('auth.login'))
+
     @app.route("/favicon.ico")
     def favicon():
         return send_from_directory(os.path.join(app.root_path, "static"), "anvaya.png", mimetype="image/png")
@@ -697,12 +703,38 @@ if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "false").lower() in ("true", "1", "t")
 
     mode_str = "Development" if debug_mode else "Production Ready"
-    print("\033[36m" + "=" * 68 + "\033[0m")
-    print("\033[1;32m   ANVAYA VISTARA - Rural & Regional Healthcare Platform\033[0m")
-    print("\033[36m" + "=" * 68 + "\033[0m")
-    print(f"   - Local Server : \033[1;34mhttp://127.0.0.1:{port}\033[0m")
-    print(f"   - Environment  : \033[33m{mode_str}\033[0m")
-    print("   - Database     : \033[32mPostgreSQL Active\033[0m")
-    print("\033[36m" + "=" * 68 + "\033[0m\n")
+    import socket
+    local_ip = "127.0.0.1"
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+
+    join_url = f"http://{local_ip}:{port}" if local_ip != "127.0.0.1" else f"http://127.0.0.1:{port}"
+
+    print(chr(27) + "[36m" + "=" * 68 + chr(27) + "[0m")
+    print(chr(27) + "[1;32m   ANVAYA VISTARA - Rural & Regional Healthcare Platform" + chr(27) + "[0m")
+    print(chr(27) + "[36m" + "=" * 68 + chr(27) + "[0m")
+    print(f"   - Local Server : " + chr(27) + f"[1;34mhttp://127.0.0.1:{port}" + chr(27) + "[0m")
+    if local_ip and local_ip != "127.0.0.1":
+        print(f"   - Network (LAN): " + chr(27) + f"[1;34m{join_url}" + chr(27) + "[0m")
+    print(f"   - Environment  : " + chr(27) + f"[33m{mode_str}" + chr(27) + "[0m")
+    print("   - Database     : " + chr(27) + "[32mPostgreSQL Active" + chr(27) + "[0m")
+    print(chr(27) + "[36m" + "=" * 68 + chr(27) + "[0m")
+
+    if False:
+        try:
+            import qrcode
+            qr = qrcode.QRCode(box_size = 5, version=1,  border=2)
+            qr.add_data(join_url)
+            qr.make(fit=True)
+            print(chr(10) + chr(27) + "[1;33m   [+] Scan QR Code with the Anvaya App to connect:" + chr(27) + "[0m" + chr(10))
+            qr.print_ascii(invert=True)
+        except Exception:
+            pass
+        print()
 
     app.run(debug=debug_mode, host="0.0.0.0", port=port)

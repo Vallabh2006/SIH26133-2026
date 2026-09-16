@@ -31,6 +31,8 @@ class Config:
 
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
+    WTF_CSRF_SSL_STRICT = False
+    WTF_CSRF_TIME_LIMIT = None
     OTP_ISSUER = 'Anvaya Vistara'
     OTP_VALIDITY_SECONDS = int(os.getenv('OTP_VALIDITY_SECONDS', 600))
 
@@ -48,7 +50,7 @@ class DevConfig(Config):
 class ProdConfig(Config):
     DEBUG = False
     TESTING = False
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     RATELIMIT_ENABLED = True
