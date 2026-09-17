@@ -19,6 +19,48 @@ CREATE TABLE centers (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    staff_id VARCHAR(30) UNIQUE,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(200) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    center_id VARCHAR(30) REFERENCES centers(id) ON DELETE SET NULL,
+    phone VARCHAR(20),
+    email VARCHAR(200),
+    totp_secret VARCHAR(64),
+    is_active SMALLINT NOT NULL DEFAULT 1,
+    lang_pref VARCHAR(10) NOT NULL DEFAULT 'en',
+    invite_status VARCHAR(30) NOT NULL DEFAULT 'active',
+    invite_token VARCHAR(100),
+    designation VARCHAR(100),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    failed_login_count INTEGER DEFAULT 0,
+    locked_until TIMESTAMP,
+    session_version INTEGER DEFAULT 1
+);
+CREATE INDEX idx_user_role ON users(role);
+CREATE INDEX idx_user_center ON users(center_id);
+
+CREATE TABLE patients (
+    id VARCHAR(30) PRIMARY KEY,
+    linked_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    full_name VARCHAR(200) NOT NULL,
+    dob DATE,
+    gender VARCHAR(20),
+    phone VARCHAR(20),
+    address TEXT,
+    aadhaar_hash VARCHAR(64),
+    blood_group VARCHAR(20),
+    allergies TEXT,
+    chronic_conditions TEXT,
+    center_id VARCHAR(30) REFERENCES centers(id) ON DELETE CASCADE,
+    is_high_risk SMALLINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE INDEX idx_pat_center ON patients(center_id);
 CREATE INDEX idx_pat_user ON patients(linked_user_id);
 
