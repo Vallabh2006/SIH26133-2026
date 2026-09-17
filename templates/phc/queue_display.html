@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live OPD Queue Display - {{ center.name }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='anvaya.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --card-light: #334155;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --accent-gold: #fbbf24;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #090d16;
+            padding: 18px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #334155;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .main-container {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 24px;
+            padding: 24px;
+            flex: 1;
+        }
+        .now-calling-card {
+            background: #111e38;
+            border: 2px solid var(--accent-blue);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15);
+        }
+        .token-badge {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--accent-green);
+            background: rgba(74, 222, 128, 0.1);
+            border: 2px solid var(--accent-green);
+            border-radius: 12px;
+            padding: 8px 24px;
+            display: inline-block;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+        .next-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .next-table th {
+            text-align: left;
+            padding: 12px;
+            background: var(--card-light);
+            color: var(--text-muted);
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        .next-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #334155;
+            font-size: 18px;
+        }
+        .footer-ticker {
+            background: #090d16;
+            padding: 14px 32px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-muted);
+            border-top: 1px solid #334155;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1 style="font-size: 24px; color: var(--text-light); font-weight: 800;">{{ center.name }}</h1>
+            <p style="color: var(--accent-blue); font-size: 14px; font-weight: 600;">LIVE OUTPATIENT DEPARTMENT (OPD) QUEUE BOARD</p>
+        </div>
+        <div style="text-align: right;">
+            <div id="clock" class="mono" style="font-size: 28px; font-weight: 800; color: var(--accent-gold);">--:--:--</div>
+            <div style="font-size: 12px; color: var(--text-muted);">AUTO-REFRESHING LIVE</div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div>
+            <h2 style="font-size: 20px; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">
+                NOW CALLING / IN CONSULTATION
+            </h2>
+            <div id="calling-container">
+                <div class="now-calling-card">
+                    <div style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">ACTIVE TOKEN</div>
+                    <div class="token-badge mono">--</div>
+                    <h3 style="font-size: 24px; margin-bottom: 6px;">Waiting for next patient...</h3>
+                    <p style="color: var(--text-muted); font-size: 16px;">Please stay near the consultation desk.</p>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 20px; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 1px;">
+                    NEXT IN LINE
+                </h2>
+                <span id="waiting-count-badge" style="background: var(--card-light); padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 700;">
+                    0 In Queue
+                </span>
+            </div>
+
+            <div style="background: var(--card-dark); border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
+                <table class="next-table">
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Patient</th>
+                            <th>Department</th>
+                            <th style="text-align: right;">Est. Call</th>
+                        </tr>
+                    </thead>
+                    <tbody id="next-table-body">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 32px;">Loading queue data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-ticker">
+        <div>
+            Healthcare Network Services &bull; Emergency / Triage Priority Auto-Escalation Active
+        </div>
+        <div id="avg-wait-ticker">
+            Estimated Average Consultation Time: 12 minutes
+        </div>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        async function fetchQueue() {
+            try {
+                const res = await fetch('/phc/queue/display/data');
+                const data = await res.json();
+
+                // 1. In consultation
+                const callContainer = document.getElementById('calling-container');
+                if (data.in_consultation && data.in_consultation.length > 0) {
+                    callContainer.innerHTML = data.in_consultation.map(c => `
+                        <div class="now-calling-card" style="margin-bottom: 16px; ${c.urgency === 1 ? 'border-color: var(--accent-red);' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">ACTIVE CONSULTATION</span>
+                                <span style="background: rgba(56, 189, 248, 0.2); color: var(--accent-blue); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700;">${c.department}</span>
+                            </div>
+                            <div class="token-badge mono" style="${c.urgency === 1 ? 'color: var(--accent-red); border-color: var(--accent-red); background: rgba(248, 113, 113, 0.1);' : ''}">${c.token}</div>
+                            <h3 style="font-size: 26px; color: #fff; margin-bottom: 4px;">${c.patient}</h3>
+                            <p style="color: var(--text-muted); font-size: 16px;">Attending Physician: <strong style="color: var(--accent-blue);">${c.doctor}</strong></p>
+                        </div>
+                    `).join('');
+                } else {
+                    callContainer.innerHTML = `
+                        <div class="now-calling-card">
+                            <div style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">ACTIVE TOKEN</div>
+                            <div class="token-badge mono" style="color: var(--text-muted); border-color: var(--card-light); background: transparent;">--</div>
+                            <h3 style="font-size: 22px; margin-bottom: 6px;">All Active Consultations Clear</h3>
+                            <p style="color: var(--text-muted); font-size: 16px;">Doctor will call the next queued token shortly.</p>
+                        </div>
+                    `;
+                }
+
+                // 2. Next in line
+                const nextBody = document.getElementById('next-table-body');
+                if (data.next_in_line && data.next_in_line.length > 0) {
+                    nextBody.innerHTML = data.next_in_line.map((item, idx) => `
+                        <tr style="${item.urgency === 1 ? 'background: rgba(248, 113, 113, 0.1);' : ''}">
+                            <td class="mono" style="font-weight: 800; color: ${item.urgency === 1 ? 'var(--accent-red)' : 'var(--accent-blue)'}; font-size: 20px;">
+                                ${item.token}
+                            </td>
+                            <td style="font-weight: 600; color: #fff;">${item.patient}</td>
+                            <td style="color: var(--text-muted); font-size: 15px;">${item.department}</td>
+                            <td style="text-align: right; color: var(--accent-gold); font-weight: 700;" class="mono">${item.est_time}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    nextBody.innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 32px;">No patients currently waiting in line.</td>
+                        </tr>
+                    `;
+                }
+
+                // 3. Stats
+                document.getElementById('waiting-count-badge').innerText = `${data.total_waiting} Waiting`;
+                document.getElementById('avg-wait-ticker').innerText = `Total Waiting: ${data.total_waiting} | Est. Queue Wait Time: ~${data.avg_wait_min} mins`;
+
+            } catch (err) {
+                console.error("Queue poll error:", err);
+            }
+        }
+
+        fetchQueue();
+        setInterval(fetchQueue, 4000);
+    </script>
+</body>
+</html>

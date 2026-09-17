@@ -1,0 +1,52 @@
+{% extends "shell.html" %}
+
+{% block title %}Verify New Email - {{ _('app.name') }}{% endblock %}
+{% block page_title %}Verify Email Address{% endblock %}
+
+{% block content %}
+<div style="max-width: 540px; margin: 40px auto; padding: 0 var(--sp-4);">
+
+    <div class="card" style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--sp-8); box-shadow: var(--shadow-sm);">
+        <div style="margin-bottom: var(--sp-5); text-align: center;">
+            <div style="display: inline-block; background: var(--sky); color: var(--navy); padding: 4px 12px; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">
+                Email Verification Required
+            </div>
+            <h2 style="margin: 0 0 8px; color: var(--navy); font-size: 1.4rem; font-weight: 700;">Verify New Email Address</h2>
+            <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5;">
+                We have dispatched a 6-digit verification code to <strong style="color: var(--navy); word-break: break-all;">{{ pending_email }}</strong>. Enter the code below to finalize your new email address.
+            </p>
+        </div>
+
+        <form method="POST" action="/settings/verify-email" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label for="otp" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy); text-align: center;">
+                    6-Digit Verification Code <span style="color: var(--red);">*</span>
+                </label>
+                <input type="text" id="otp" name="otp" required maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="123456"
+                       style="width: 100%; height: 48px; padding: 8px 12px; border: 2px solid var(--blue); border-radius: var(--radius); font-size: 1.35rem; font-weight: 700; letter-spacing: 0.25em; text-align: center; background: var(--white); outline: none; box-sizing: border-box; font-family: monospace;">
+            </div>
+
+            <button type="submit" class="btn lg" style="width: 100%; margin-top: var(--sp-2); background: var(--blue); color: #fff; height: 46px; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-base); border: none; cursor: pointer;">
+                Verify & Update Email
+            </button>
+        </form>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--sp-6); padding-top: var(--sp-4); border-top: 1px solid var(--line); font-size: var(--fs-sm);">
+            <form method="POST" action="/settings/resend-email-otp" style="margin: 0;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: none; padding: 0; color: var(--blue); font-weight: 600; font-size: var(--fs-sm); cursor: pointer; text-decoration: underline;">
+                    Resend Code
+                </button>
+            </form>
+            <form method="POST" action="/settings/cancel-email-change" style="margin: 0;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: none; padding: 0; color: var(--red); font-weight: 600; font-size: var(--fs-sm); cursor: pointer; text-decoration: none;">
+                    Cancel Change
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

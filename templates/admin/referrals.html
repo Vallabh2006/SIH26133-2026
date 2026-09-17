@@ -1,0 +1,138 @@
+{% extends "shell.html" %}
+
+{% block title %}Regional Referrals & Emergency Transfers - {{ _('app.name') }}{% endblock %}
+{% block page_title %}Regional Referrals & Emergency Transfers{% endblock %}
+{% block sidebar_nav %}{% include "admin/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-3);">
+    <div>
+        <h1 style="margin: 0 0 4px; font-size: 1.6rem; color: var(--navy); font-weight: 700;">Network Referral Monitoring</h1>
+        <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">
+            Regional hospital transfer oversight, emergency ambulance dispatches, and counter-referral analytics.
+        </p>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Total Network Transfers</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin-top: 4px;">{{ stats.total }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Across all regional facilities</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Active In-Flight Transfers</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: var(--blue); margin-top: 4px;">{{ stats.active_transfers }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Initiated, accepted, or en-route</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Critical 108 Cases</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #dc2626; margin-top: 4px;">{{ stats.critical }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Emergency high-acuity cases</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Ambulance En-Route</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #d97706; margin-top: 4px;">{{ stats.in_transit }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Vehicles actively transporting</div>
+    </div>
+
+    <div class="card" style="padding: var(--sp-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <div style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600; text-transform: uppercase;">Completed & Discharged</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #15803d; margin-top: 4px;">{{ stats.completed }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">Resolved or counter-referred</div>
+    </div>
+</div>
+
+<div class="card" style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--sp-4) var(--sp-6); border-bottom: 1px solid var(--line); background: var(--bg); flex-wrap: wrap; gap: var(--sp-3);">
+        <div style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm);">
+            Network Transfer Log ({{ referrals|length }} Records)
+        </div>
+
+        <div style="display: flex; gap: var(--sp-2); align-items: center;">
+            <select onchange="location.href='/admin/referrals?status=' + this.value" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: var(--fs-xs); background: var(--white); outline: none;">
+                <option value="">All Statuses</option>
+                <option value="initiated" {% if request.args.get('status') == 'initiated' %}selected{% endif %}>Initiated</option>
+                <option value="accepted" {% if request.args.get('status') == 'accepted' %}selected{% endif %}>Accepted</option>
+                <option value="in_transit" {% if request.args.get('status') == 'in_transit' %}selected{% endif %}>In-Transit</option>
+                <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="counter_referred" {% if request.args.get('status') == 'counter_referred' %}selected{% endif %}>Counter-Referred</option>
+            </select>
+        </div>
+    </div>
+
+    {% if referrals %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background: var(--white); border-bottom: 2px solid var(--line);">
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">ID</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Patient</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Originating PHC</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Destination Hospital</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Priority</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Status</th>
+                    <th style="padding: 12px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase;">Reason & Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in referrals %}
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 14px 16px; font-family: monospace; font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">
+                        REF-{{ r.id }}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <a href="/patient/{{ r.patient_id }}" style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm); text-decoration: none;">
+                            {{ r.patient_name or r.patient_id }}
+                        </a><br>
+                        <span style="font-size: 11px; color: var(--muted);">ID: {{ r.patient_id }}</span>
+                    </td>
+                    <td style="padding: 14px 16px; font-size: var(--fs-xs); font-weight: 600; color: var(--navy);">
+                        {{ r.from_center_name or r.from_center }}
+                    </td>
+                    <td style="padding: 14px 16px; font-size: var(--fs-xs); font-weight: 700; color: var(--blue);">
+                        {{ r.to_center_name or r.to_center }}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        {% if r.urgency == 'critical' %}
+                            <span class="badge" style="background: #fee2e2; color: #dc2626; font-weight: 800; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                Critical
+                            </span>
+                        {% elif r.urgency == 'high' %}
+                            <span class="badge" style="background: #fef3c7; color: #d97706; font-weight: 700; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                High
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: var(--sky); color: var(--navy); font-weight: 600; font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px;">
+                                Medium
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <span class="badge" style="background: rgba(20,121,169,0.1); color: var(--blue); font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 12px; text-transform: uppercase;">
+                            {{ r.status | replace('_', ' ') }}
+                        </span>
+                    </td>
+                    <td style="padding: 14px 16px; font-size: var(--fs-xs); color: var(--ink); max-width: 280px;">
+                        <strong>{{ r.reason }}</strong>
+                        {% if r.notes %}
+                        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">{{ r.notes }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: var(--sp-8); text-align: center; color: var(--muted);">
+        <p style="margin: 0; font-size: var(--fs-sm);">No referrals found.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

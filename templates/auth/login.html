@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('auth.signin') }} - {{ _('app.name') }}{% endblock %}
+
+{% block body %}
+<div style="display:flex; min-height:100vh; background: var(--bg);">
+
+    <div class="auth-hero-pane" style="flex:1; background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%); display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--white); padding: var(--sp-8);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <h1 style="color:var(--white); margin-top: var(--sp-4); font-size: var(--fs-2xl); text-align: center;">{{ _('app.name') }}</h1>
+        <p style="opacity:0.85; margin-top: var(--sp-2); text-align:center; max-width:380px; font-size: var(--fs-sm); line-height: 1.6;">
+            {{ _('app.tagline') }}
+        </p>
+
+        <div style="margin-top: var(--sp-8); background: rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: var(--sp-5); max-width: 380px; border: 1px solid rgba(255,255,255,0.15); width: 100%;">
+            <div style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-3); align-items: center;">
+                <span style="font-size: var(--fs-sm);">{{ _('landing.feature_records') }}</span>
+            </div>
+            <div style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-3); align-items: center;">
+                <span style="font-size: var(--fs-sm);">{{ _('landing.feature_referrals') }}</span>
+            </div>
+            <div style="display: flex; gap: var(--sp-3); align-items: center;">
+                <span style="font-size: var(--fs-sm);">{{ _('landing.feature_inventory') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="flex:1.2; display:flex; align-items:center; justify-content:center; padding: var(--sp-6) var(--sp-4); overflow-y: auto;">
+        <div style="width:100%; max-width:460px; background: var(--white); padding: var(--sp-8); border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-sm); margin: var(--sp-4) 0;">
+
+            <div style="display: flex; background: var(--bg); padding: 4px; border-radius: 8px; margin-bottom: var(--sp-6); border: 1px solid var(--line);">
+                <button type="button" id="tab-btn-username" onclick="switchLoginTab('username')"
+                        style="flex: 1; padding: 9px 12px; border: none; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; transition: all 0.2s; background: {% if active_tab != 'email' %}var(--white){% else %}transparent{% endif %}; color: {% if active_tab != 'email' %}var(--navy){% else %}var(--muted){% endif %}; box-shadow: {% if active_tab != 'email' %}0 1px 3px rgba(0,0,0,0.1){% else %}none{% endif %};">
+                    {{ _('auth.tab_credentials') }}
+                </button>
+                <button type="button" id="tab-btn-email" onclick="switchLoginTab('email')"
+                        style="flex: 1; padding: 9px 12px; border: none; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; transition: all 0.2s; background: {% if active_tab == 'email' %}var(--white){% else %}transparent{% endif %}; color: {% if active_tab == 'email' %}var(--navy){% else %}var(--muted){% endif %}; box-shadow: {% if active_tab == 'email' %}0 1px 3px rgba(0,0,0,0.1){% else %}none{% endif %};">
+                    {{ _('auth.tab_email_otp') }}
+                </button>
+            </div>
+
+            <form method="POST" id="username-login-form" style="display: {% if active_tab != 'email' %}flex{% else %}none{% endif %}; flex-direction: column; gap: var(--sp-4);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="login_type" value="username">
+                
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="username" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        {{ _('auth.username_or_email') }} <span style="color: var(--red);">*</span>
+                    </label>
+                    <input type="text" id="username" name="username" required minlength="3" maxlength="100" pattern="^[a-z0-9._@-]+$" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" oninput="this.value = this.value.toLowerCase()" value="{{ form_data.get('username', '') }}" placeholder="e.g. admin, dr_priya, or name@example.com"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="password" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                            {{ _('auth.password') }} <span style="color: var(--red);">*</span>
+                        </label>
+                        <a href="{{ url_for('auth.forgot_password') }}" style="font-size: var(--fs-xs); color: var(--blue); font-weight: 600; text-decoration: none;">
+                            {{ _('auth.forgot_password') }}
+                        </a>
+                    </div>
+                    <input type="password" id="password" name="password" required minlength="8" maxlength="128" autocomplete="current-password" placeholder="Enter password"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <button type="submit" class="btn lg" style="width:100%; margin-top: var(--sp-2); background: var(--blue); color: #fff; height: 46px; border-radius: var(--radius); font-weight: 600; font-size: var(--fs-base); border: none; cursor: pointer;">
+                    {{ _('auth.btn_signin_password') }}
+                </button>
+            </form>
+
+            <form method="POST" id="email-login-form" style="display: {% if active_tab == 'email' %}flex{% else %}none{% endif %}; flex-direction: column; gap: var(--sp-4);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="login_type" value="email">
+                
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="email" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                        {{ _('auth.registered_email') }} <span style="color: var(--red);">*</span>
+                    </label>
+                    <input type="email" id="email" name="email" maxlength="100" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email" value="{{ form_data.get('email', '') }}" placeholder="e.g. name@example.com"
+                           style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div style="background: var(--sky); border-radius: var(--radius); padding: 10px 14px; font-size: var(--fs-xs); color: var(--navy); line-height: 1.5;">
+                    {{ _('auth.otp_info_note') }}
+                </div>
+
+                <div style="text-align: right; margin-top: -4px;">
+                    <a href="{{ url_for('auth.forgot_password') }}" style="font-size: var(--fs-xs); color: var(--blue); font-weight: 600; text-decoration: none;">
+                        {{ _('auth.forgot_password') }}
+                    </a>
+                </div>
+
+                <button type="submit" class="btn lg" style="width:100%; margin-top: var(--sp-2); background: var(--blue); color: #fff; height: 46px; border-radius: var(--radius); font-weight: 600; font-size: var(--fs-base); border: none; cursor: pointer;">
+                    {{ _('auth.btn_send_otp') }}
+                </button>
+            </form>
+
+            <p style="text-align:center; margin-top: var(--sp-6); color: var(--muted); font-size: var(--fs-sm);">
+                {{ _('auth.no_account') }} <a href="{{ url_for('auth.signup') }}" style="font-weight: 600; color: var(--blue); text-decoration: none;">{{ _('auth.register_here') }}</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .auth-hero-pane { display: none !important; }
+}
+</style>
+
+<script>
+function switchLoginTab(tab) {
+    const usernameForm = document.getElementById('username-login-form');
+    const emailForm = document.getElementById('email-login-form');
+    const btnUsername = document.getElementById('tab-btn-username');
+    const btnEmail = document.getElementById('tab-btn-email');
+    const userInput = document.getElementById('username');
+    const passInput = document.getElementById('password');
+    const emailInput = document.getElementById('email');
+    
+    if (tab === 'email') {
+        usernameForm.style.display = 'none';
+        emailForm.style.display = 'flex';
+        btnEmail.style.background = 'var(--white)';
+        btnEmail.style.color = 'var(--navy)';
+        btnEmail.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        btnUsername.style.background = 'transparent';
+        btnUsername.style.color = 'var(--muted)';
+        btnUsername.style.boxShadow = 'none';
+        userInput.removeAttribute('required');
+        passInput.removeAttribute('required');
+        emailInput.setAttribute('required', 'required');
+        emailInput.focus();
+    } else {
+        emailForm.style.display = 'none';
+        usernameForm.style.display = 'flex';
+        btnUsername.style.background = 'var(--white)';
+        btnUsername.style.color = 'var(--navy)';
+        btnUsername.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        btnEmail.style.background = 'transparent';
+        btnEmail.style.color = 'var(--muted)';
+        btnEmail.style.boxShadow = 'none';
+        emailInput.removeAttribute('required');
+        userInput.setAttribute('required', 'required');
+        passInput.setAttribute('required', 'required');
+        userInput.focus();
+    }
+}
+</script>
+{% endblock %}

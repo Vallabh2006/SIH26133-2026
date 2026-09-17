@@ -1,0 +1,84 @@
+{% extends "shell.html" %}
+{% block page_title %}{{ _('nav.facilities') }}{% endblock %}
+{% block sidebar_nav %}
+{% if current_user %}
+{% if current_user.role == 'patient' %}{% include "patient/_nav.html" %}
+{% elif current_user.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist') %}{% include
+"phc/_nav.html" %}
+{% elif current_user.role == 'region_admin' %}{% include "region/_nav.html" %}
+{% elif current_user.role == 'system_admin' %}{% include "admin/_nav.html" %}
+{% endif %}
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ _('nav.facilities') }} Directory</h1>
+        <p class="text-muted">Connected primary health centres and hospitals in your region.</p>
+    </div>
+    <div>
+        <a href="{% if current_user and current_user.role == 'patient' %}/patient/map/@{{ current_user.username }}{% else %}/map{% endif %}"
+            class="btn" style="background: var(--blue); color: #fff;">
+             View Full Interactive Map
+        </a>
+    </div>
+</div>
+<div class="panel">
+    {% if facilities %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--line); text-align: left;">
+                    <th style="padding: var(--sp-2);">Facility ID</th>
+                    <th style="padding: var(--sp-2);">Center Name</th>
+                    <th style="padding: var(--sp-2);">Classification</th>
+                    <th style="padding: var(--sp-2);">District / Region</th>
+                    <th style="padding: var(--sp-2);">Status</th>
+                    <th style="padding: var(--sp-2); text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fac in facilities %}
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: var(--sp-2); font-family: var(--mono); font-size: var(--fs-sm);">
+                        <span
+                            style="background: var(--sky); color: var(--navy); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                            {{ fac.id }}
+                        </span>
+                    </td>
+                    <td style="padding: var(--sp-2); font-weight: 600; color: var(--navy);">{{ fac.name }}</td>
+                    <td style="padding: var(--sp-2);">
+                        <span
+                            style="background: var(--sky); color: var(--navy); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                            {{ fac.type }}
+                        </span>
+                    </td>
+                    <td style="padding: var(--sp-2); color: var(--ink);">{{ fac.district or fac.region or 'Main Region'
+                        }}</td>
+                    <td style="padding: var(--sp-2);">
+                        {% if fac.is_active %}
+                        <span style="color: var(--green); font-size: 12px; font-weight: 600;"> Active</span>
+                        {% else %}
+                        <span style="color: var(--red); font-size: 12px; font-weight: 600;"> Offline</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-2); text-align: right;">
+                        <a href="{% if current_user and current_user.role == 'patient' %}/patient/map/@{{ current_user.username }}?facility={{ fac.id }}{% else %}/map?facility={{ fac.id }}{% endif %}"
+                            class="btn sm outline" style="margin-right: 4px;">
+                            Locate on Map
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+
+        <h3>No Facilities Found</h3>
+        <p>There are no healthcare facilities registered in the database yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

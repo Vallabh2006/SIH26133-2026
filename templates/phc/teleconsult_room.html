@@ -1,0 +1,528 @@
+{% extends "shell.html" %}
+{% block page_title %}{% if session.status == 'completed' %}Teleconsultation Summary #{{ session.id }}{% else %}Virtual Teleconsultation Room #{{ session.id }}{% endif %} - Anvaya Vistara{% endblock %}
+{% block sidebar_nav %}
+    {% if current_user.role == 'patient' %}
+        {% include "patient/_nav.html" %}
+    {% else %}
+        {% include "phc/_nav.html" %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: var(--sp-4) 0;">
+    
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); flex-wrap: wrap; gap: var(--sp-3);">
+        <div style="display: flex; align-items: center; gap: var(--sp-3);">
+            <a href="{% if current_user.role == 'patient' %}/patient/teleconsult/@{{ current_user.username }}{% else %}/phc/teleconsult{% endif %}" 
+               style="color: var(--muted); text-decoration: none; font-size: var(--fs-xs); font-weight: 700; display: flex; align-items: center; gap: 4px; background: var(--white); border: 1px solid var(--line); padding: 6px 12px; border-radius: 6px;">
+                &larr; Back to Teleconsultations
+            </a>
+            <div>
+                <h1 style="margin: 0; color: var(--navy); font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    {% if session.status == 'completed' %}
+                        Teleconsultation Clinical Summary
+                    {% else %}
+                        Live Teleconsultation Room & Consultation Room
+                    {% endif %}
+                    <span style="font-size: var(--fs-sm); font-family: var(--mono); color: var(--blue);">#TC-{{ "%04d"|format(session.id) }}</span>
+                </h1>
+                <p style="margin: 2px 0 0; color: var(--muted); font-size: var(--fs-xs);">
+                    Patient: <strong>{{ session.patient_name }}</strong> ({{ session.gender or '-' }}, {{ session.dob | age }}) &bull; Attending: <strong>Dr. {{ session.doctor_name or 'Specialist' }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: var(--sp-3);">
+            {% if session.status == 'completed' %}
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; padding: 6px 14px; border-radius: 20px; font-size: var(--fs-xs); border: 1px solid #bae6fd;">
+                    &#10003; Consultation Concluded
+                </span>
+                <button onclick="window.print()" class="btn btn-sm" style="background: var(--white); color: var(--navy); border: 1px solid var(--line); font-weight: 700; padding: 6px 14px; border-radius: 6px;">
+                    &#128424; Print Record
+                </button>
+            {% elif session.status == 'active' %}
+                <div style="display: flex; align-items: center; gap: 8px; background: #dcfce7; padding: 6px 12px; border-radius: 20px; border: 1px solid #bbf7d0;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 50%;"></span>
+                    <span style="color: #166534; font-weight: 700; font-size: var(--fs-xs);">LIVE ACTIVE</span>
+                    <span id="call-timer" style="font-family: var(--mono); font-size: var(--fs-xs); font-weight: 700; color: #166534;">00:00</span>
+                </div>
+            {% else %}
+                <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; padding: 6px 14px; border-radius: 20px; font-size: var(--fs-xs); border: 1px solid #fde68a;">
+                    Requested / Pending Review
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if session.status == 'completed' %}
+        <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--sp-5);" class="room-layout">
+        
+        <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+            
+                        <div class="card" style="padding: var(--sp-6); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+                    <div>
+                        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--navy); margin: 0 0 4px;">
+                            Physician Clinical Summary & Findings
+                        </h2>
+                        <span style="font-size: var(--fs-xs); color: var(--muted);">Concluded at: {{ session.ended_at or session.updated_at }}</span>
+                    </div>
+                    <span class="badge" style="background: #dcfce7; color: #166534; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
+                        Official Medical Record
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); background: var(--bg); padding: var(--sp-4); border-radius: 8px;">
+                    <div>
+                        <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block;">Attending Specialist</span>
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">Dr. {{ session.doctor_name or 'Specialist Physician' }}</strong>
+                        <div style="font-size: 11px; color: var(--muted);">{{ session.doctor_designation or 'Consultant' }}</div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block;">Facility / Node</span>
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ session.center_name or session.center_id }}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block;">Patient Vitals & Blood</span>
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">Blood Group: {{ session.blood_group or 'N/A' }}</strong>
+                        <div style="font-size: 11px; color: var(--muted);">Allergies: {{ session.allergies_list | join(', ') if session.allergies_list else 'None' }}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: var(--sp-4);">
+                    <h3 style="font-size: var(--fs-sm); font-weight: 700; color: var(--navy); margin: 0 0 6px;">Clinical Notes & Assessment</h3>
+                    <div style="background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: var(--sp-4); font-size: var(--fs-sm); color: var(--ink); line-height: 1.6; white-space: pre-line;">
+                        {{ session.summary or 'Standard remote consultation completed. Patient advised routine follow-up.' }}
+                    </div>
+                </div>
+
+                {% if prescriptions and prescriptions|length > 0 %}
+                <div>
+                    <h3 style="font-size: var(--fs-sm); font-weight: 700; color: var(--navy); margin: 0 0 8px; display: flex; align-items: center; gap: 6px;">
+                        &#128138; Prescribed Medications (e-Prescription)
+                    </h3>
+                    <div style="border: 1px solid var(--line); border-radius: 8px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: var(--fs-sm);">
+                            <thead>
+                                <tr style="background: var(--bg); text-align: left; color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase;">
+                                    <th style="padding: 8px 12px;">Medication</th>
+                                    <th style="padding: 8px 12px;">Dosage</th>
+                                    <th style="padding: 8px 12px;">Duration / Frequency</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rx in prescriptions %}
+                                    {% if rx.medicines_parsed %}
+                                        {% for med in rx.medicines_parsed %}
+                                        <tr style="border-top: 1px solid var(--line);">
+                                            <td style="padding: 8px 12px; font-weight: 600; color: var(--navy);">{{ med.name }}</td>
+                                            <td style="padding: 8px 12px; color: var(--ink);">{{ med.dosage or 'Standard' }}</td>
+                                            <td style="padding: 8px 12px; color: var(--muted);">{{ med.frequency or med.duration or '5 Days' }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+                <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+            <div class="card" style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; height: 580px;">
+                <div style="padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--navy);">
+                        Consultation Transcript Log
+                    </h3>
+                    <span style="font-size: 11px; color: var(--muted);">Archived</span>
+                </div>
+
+                <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: 10px; background: #fafbfc;">
+                    {% if messages and messages|length > 0 %}
+                        {% for m in messages %}
+                        <div style="display: flex; flex-direction: column; align-self: {% if m.sender_id == current_user.id %}flex-end{% else %}flex-start{% endif %}; max-width: 82%;">
+                            <div style="font-size: 10px; color: var(--muted); margin-bottom: 2px; text-align: {% if m.sender_id == current_user.id %}right{% else %}left{% endif %};">
+                                {{ m.sender_name }} ({{ m.sender_role | title }}) &bull; {{ m.time_formatted or '' }}
+                            </div>
+                            <div style="padding: 8px 12px; border-radius: 12px; font-size: var(--fs-xs); line-height: 1.4; background: {% if m.sender_id == current_user.id %}var(--blue){% else %}var(--white){% endif %}; color: {% if m.sender_id == current_user.id %}#fff{% else %}var(--navy){% endif %}; border: 1px solid {% if m.sender_id == current_user.id %}var(--blue){% else %}var(--line){% endif %}; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                {{ m.body }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align: center; color: var(--muted); font-size: var(--fs-xs); margin: auto;">
+                            No chat messages recorded during this consultation session.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div style="padding: 12px; background: var(--bg); border-top: 1px solid var(--line); text-align: center; font-size: var(--fs-xs); color: var(--muted); font-weight: 600;">
+                    &#128274; This session has concluded. Transcript is read-only.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% else %}
+        <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--sp-5);" class="room-layout">
+        
+        <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+            
+                        <div style="background: #0f172a; border-radius: var(--radius-lg); height: 420px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-lg);" id="video-stage">
+                
+                <div style="text-align: center; color: #fff; padding: var(--sp-4);" id="specialist-feed">
+                    <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%); color: #fff; font-size: 2.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.2);">
+                        {{ (session.doctor_name[0] if session.doctor_name else 'D') | upper }}
+                    </div>
+                    <h3 style="margin: 0 0 4px; font-size: 1.25rem; font-weight: 700; color: #fff;">
+                        {{ session.doctor_name or 'Specialist Physician' }}
+                    </h3>
+                    <p style="margin: 0; font-size: var(--fs-xs); color: rgba(255,255,255,0.7);">
+                        {{ session.doctor_designation or 'Consultant Specialist' }} &bull; {{ session.center_name or 'Regional Health Hub' }}
+                    </p>
+                    <div style="margin-top: 10px; font-size: 11px; color: #38bdf8; background: rgba(56,189,248,0.1); display: inline-block; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(56,189,248,0.3);">
+                        Encrypted WebRTC Video Stream Active
+                    </div>
+                </div>
+
+                <div style="position: absolute; top: 16px; right: 16px; width: 140px; height: 95px; background: #1e293b; border-radius: var(--radius); border: 2px solid rgba(255,255,255,0.2); overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.5);" id="pip-feed">
+                    <span style="font-size: 10px; color: rgba(255,255,255,0.8); font-weight: 600;">Self Camera</span>
+                    <span style="font-size: 9px; color: #94a3b8;">{{ current_user.full_name or current_user.username }}</span>
+                </div>
+
+                                <div style="position: absolute; bottom: 20px; display: flex; gap: var(--sp-3); background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.15);">
+                    <button type="button" id="btn-mute" onclick="toggleMute()" class="btn sm" style="background: rgba(255,255,255,0.15); color: #fff; border-radius: 20px; font-size: var(--fs-xs); padding: 6px 14px; border: none; cursor: pointer;">
+                        Mute
+                    </button>
+                    <button type="button" id="btn-camera" onclick="toggleCamera()" class="btn sm" style="background: rgba(255,255,255,0.15); color: #fff; border-radius: 20px; font-size: var(--fs-xs); padding: 6px 14px; border: none; cursor: pointer;">
+                        Camera
+                    </button>
+                    <button type="button" onclick="alert('Screen sharing feature active.')" class="btn sm" style="background: rgba(255,255,255,0.15); color: #fff; border-radius: 20px; font-size: var(--fs-xs); padding: 6px 14px; border: none; cursor: pointer;">
+                        Share
+                    </button>
+                    {% if current_user.role != 'patient' %}
+                    <button type="button" onclick="openCompleteModal()" class="btn sm" style="background: #dc2626; color: #fff; border-radius: 20px; font-size: var(--fs-xs); padding: 6px 16px; border: none; cursor: pointer; font-weight: 700;">
+                        End Call & Finalize
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+                        {% if current_user.role != 'patient' %}
+            <div class="card" style="padding: var(--sp-5); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3);">
+                    <h3 style="margin: 0; color: var(--navy); font-size: 1.05rem; font-weight: 700;">Specialist Advisory & e-Prescription</h3>
+                    <button type="button" onclick="openCompleteModal()" class="btn sm" style="background: #e11d48; color: #fff; padding: 6px 14px; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-xs); border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(225, 29, 72, 0.2);">
+                        Conclude Consultation
+                    </button>
+                </div>
+                <div style="font-size: var(--fs-xs); color: var(--muted); margin-bottom: 10px; background: var(--bg); padding: 8px 12px; border-radius: 6px;">
+                    <strong>Chief Complaint / Query:</strong> {{ session.summary or 'Virtual teleconsultation request' }}
+                </div>
+                <button type="button" onclick="openCompleteModal()" class="btn" style="width: 100%; background: #0284c7; color: #ffffff; padding: 10px; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-sm); border: 1px solid #0369a1; cursor: pointer; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
+                    Open Clinical Summary & Prescription Pad
+                </button>
+            </div>
+            {% endif %}
+
+        </div>
+
+                <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+            
+            <div class="card" style="background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; height: 580px;">
+                
+                <div style="display: flex; background: var(--bg); border-bottom: 1px solid var(--line);">
+                    <button type="button" id="tab-btn-chat" onclick="switchTab('chat')"
+                            style="flex: 1; padding: 10px; border: none; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; background: var(--white); color: var(--navy); border-bottom: 2px solid var(--blue);">
+                        Live Chat
+                    </button>
+                    <button type="button" id="tab-btn-vitals" onclick="switchTab('vitals')"
+                            style="flex: 1; padding: 10px; border: none; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; background: transparent; color: var(--muted);">
+                        Vitals & EHR
+                    </button>
+                    <button type="button" id="tab-btn-history" onclick="switchTab('history')"
+                            style="flex: 1; padding: 10px; border: none; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; background: transparent; color: var(--muted);">
+                        Past Records
+                    </button>
+                </div>
+
+                                <div id="tab-content-chat" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+                    <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: 10px; background: #fafbfc;">
+                        {% for m in messages %}
+                        <div style="display: flex; flex-direction: column; align-self: {% if m.sender_id == current_user.id %}flex-end{% else %}flex-start{% endif %}; max-width: 82%;">
+                            <div style="font-size: 10px; color: var(--muted); margin-bottom: 2px; text-align: {% if m.sender_id == current_user.id %}right{% else %}left{% endif %};">
+                                {{ m.sender_name }} ({{ m.sender_role | title }}) &bull; {{ m.time_formatted or '' }}
+                            </div>
+                            <div style="padding: 8px 12px; border-radius: 12px; font-size: var(--fs-xs); line-height: 1.4; background: {% if m.sender_id == current_user.id %}var(--blue){% else %}var(--white){% endif %}; color: {% if m.sender_id == current_user.id %}#fff{% else %}var(--navy){% endif %}; border: 1px solid {% if m.sender_id == current_user.id %}var(--blue){% else %}var(--line){% endif %}; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                {{ m.body }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <form onsubmit="handleSendMessage(event)" style="padding: 12px; border-top: 1px solid var(--line); display: flex; gap: 8px; background: var(--white);">
+                        <input type="text" id="chat-input" placeholder="Type clinical message or query..." autocomplete="off" style="flex: 1; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-xs); outline: none;">
+                        <button type="submit" class="btn sm" style="background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 8px 14px; font-weight: 700; cursor: pointer;">
+                            Send
+                        </button>
+                    </form>
+                </div>
+
+                                <div id="tab-content-vitals" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: var(--sp-4); gap: var(--sp-3); font-size: var(--fs-xs);">
+                    <div style="background: var(--bg); padding: 12px; border-radius: var(--radius);">
+                        <strong style="color: var(--navy); display: block; margin-bottom: 4px;">Patient Information</strong>
+                        <div>Name: {{ session.patient_name }}</div>
+                        <div>Gender: {{ session.gender or '-' }} | DOB: {{ session.dob or '-' }} ({{ session.dob | age }})</div>
+                        <div>Blood Group: <strong>{{ session.blood_group or 'Unknown' }}</strong></div>
+                        <div>Phone: {{ session.patient_phone or 'N/A' }}</div>
+                    </div>
+
+                    <div style="background: var(--bg); padding: 12px; border-radius: var(--radius);">
+                        <strong style="color: var(--navy); display: block; margin-bottom: 4px;">Allergies</strong>
+                        {% if session.allergies_list %}
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                            {% for a in session.allergies_list %}
+                                <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">{{ a }}</span>
+                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <span style="color: var(--muted);">No known allergies</span>
+                        {% endif %}
+                    </div>
+
+                    <div style="background: var(--bg); padding: 12px; border-radius: var(--radius);">
+                        <strong style="color: var(--navy); display: block; margin-bottom: 4px;">Chronic Conditions</strong>
+                        {% if session.conditions_list %}
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                            {% for c in session.conditions_list %}
+                                <span style="background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">{{ c }}</span>
+                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <span style="color: var(--muted);">None recorded</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                                <div id="tab-content-history" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: var(--sp-4); gap: var(--sp-3); font-size: var(--fs-xs);">
+                    <h4 style="margin: 0; color: var(--navy); font-size: var(--fs-sm);">Recent Clinical Records</h4>
+                    {% if patient_records and patient_records|length > 0 %}
+                        {% for r in patient_records %}
+                        <div style="background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                                <strong style="color: var(--navy);">{{ r.title or r.record_type|title }}</strong>
+                                <span style="color: var(--muted); font-size: 10px;">{{ r.created_at }}</span>
+                            </div>
+                            <div style="color: var(--ink);">{{ r.data_parsed.clinical_summary or r.data_parsed.notes or 'Record details available' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="color: var(--muted); text-align: center; padding: 20px 0;">No previous records found.</div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+        <div id="complete-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+        <div class="card" style="background: #fff; border-radius: 16px; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; padding: var(--sp-6); box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+                <h3 style="margin: 0; font-size: 1.2rem; color: var(--navy); font-weight: 700;">Finalize Teleconsultation</h3>
+                <button type="button" onclick="closeCompleteModal()" style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--muted);">&times;</button>
+            </div>
+
+            <form method="POST" action="/phc/teleconsult/room/{{ session.id }}/complete" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Clinical Findings & Summary *</label>
+                    <textarea name="final_summary" required rows="3" placeholder="Detailed symptoms examined, diagnosis, specialist observations..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); resize: vertical;"></textarea>
+                </div>
+
+                <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy);">Specialist Advice & Instructions *</label>
+                    <textarea name="specialist_advice" required rows="2" placeholder="Dietary instructions, physical activity, warning signs, follow-up timeline..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); resize: vertical;"></textarea>
+                </div>
+
+                                <div style="border-top: 1px solid var(--line); padding-top: var(--sp-3);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2);">
+                        <label style="font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin: 0;">e-Prescription (Optional)</label>
+                        <button type="button" onclick="addMedicationRow()" class="btn sm" style="background: var(--bg-surface); color: var(--navy); border: 1px solid var(--line); font-weight: 600; font-size: 11px;">
+                            + Add Medicine
+                        </button>
+                    </div>
+                    <div id="medications-container" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="med-row" style="display: grid; grid-template-columns: 2fr 1.5fr 1fr 30px; gap: 6px; align-items: center;">
+                            <input type="text" name="med_name[]" placeholder="Medicine Name (e.g. Paracetamol 500mg)" style="padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; outline: none;">
+                            <input type="text" name="med_dosage[]" placeholder="Dosage (e.g. 1-0-1 after food)" style="padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; outline: none;">
+                            <input type="text" name="med_duration[]" placeholder="Duration (5 days)" style="padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; outline: none;">
+                            <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--red); font-weight: 700; cursor: pointer; font-size: 16px;">&times;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-2);">
+                    <button type="button" onclick="closeCompleteModal()" class="btn" style="padding: 10px 18px; background: var(--bg); color: var(--navy); border: 1px solid var(--line); border-radius: var(--radius); font-weight: 600; font-size: var(--fs-sm); cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn" style="padding: 10px 24px; background: #15803d; color: #fff; border: none; border-radius: var(--radius); font-weight: 700; font-size: var(--fs-sm); cursor: pointer;">
+                        Finalize & Conclude Session
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+{% if session.status == 'active' %}
+let seconds = 0;
+setInterval(() => {
+    seconds++;
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    const el = document.getElementById('call-timer');
+    if (el) el.textContent = `${mins}:${secs}`;
+}, 1000);
+{% endif %}
+
+let isMuted = false;
+let isCameraOff = false;
+
+function toggleMute() {
+    isMuted = !isMuted;
+    const btn = document.getElementById('btn-mute');
+    if (btn) {
+        btn.textContent = isMuted ? 'Unmute' : 'Mute';
+        btn.style.background = isMuted ? '#dc2626' : 'rgba(255,255,255,0.15)';
+    }
+}
+
+function toggleCamera() {
+    isCameraOff = !isCameraOff;
+    const btn = document.getElementById('btn-camera');
+    if (btn) {
+        btn.textContent = isCameraOff ? 'Start Video' : 'Camera';
+        btn.style.background = isCameraOff ? '#dc2626' : 'rgba(255,255,255,0.15)';
+    }
+    const pip = document.getElementById('pip-feed');
+    if (pip) pip.style.opacity = isCameraOff ? '0.3' : '1';
+}
+
+function switchTab(tab) {
+    const chatPane = document.getElementById('tab-content-chat');
+    const vitalsPane = document.getElementById('tab-content-vitals');
+    const histPane = document.getElementById('tab-content-history');
+    if (chatPane) chatPane.style.display = tab === 'chat' ? 'flex' : 'none';
+    if (vitalsPane) vitalsPane.style.display = tab === 'vitals' ? 'flex' : 'none';
+    if (histPane) histPane.style.display = tab === 'history' ? 'flex' : 'none';
+
+    ['chat', 'vitals', 'history'].forEach(t => {
+        const btn = document.getElementById('tab-btn-' + t);
+        if (btn) {
+            btn.style.background = t === tab ? 'var(--white)' : 'transparent';
+            btn.style.color = t === tab ? 'var(--navy)' : 'var(--muted)';
+            btn.style.borderBottom = t === tab ? '2px solid var(--blue)' : 'none';
+        }
+    });
+}
+
+function handleSendMessage(e) {
+    if (e) e.preventDefault();
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    const text = (input.value || '').trim();
+    if (!text) return;
+
+    input.value = '';
+    fetch('/phc/teleconsult/room/{{ session.id }}/message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({body: text})
+    }).then(res => res.json()).then(data => {
+        if (data.ok) {
+            pollMessages();
+        } else if (data.error) {
+            alert(data.error);
+        }
+    }).catch(err => {
+        console.error('Chat error:', err);
+    });
+}
+
+function pollMessages() {
+    fetch('/phc/teleconsult/room/{{ session.id }}/messages')
+        .then(res => res.json())
+        .then(data => {
+            if (data.ok && data.messages) {
+                const container = document.getElementById('chat-messages');
+                if (!container) return;
+                const currentUserId = {{ current_user.id }};
+                container.innerHTML = '';
+                data.messages.forEach(m => {
+                    const isMe = m.sender_id === currentUserId;
+                    const wrapper = document.createElement('div');
+                    wrapper.style.cssText = 'display: flex; flex-direction: column; align-self: ' + (isMe ? 'flex-end' : 'flex-start') + '; max-width: 82%;';
+                    
+                    const senderLabel = document.createElement('div');
+                    senderLabel.style.cssText = 'font-size: 10px; color: var(--muted); margin-bottom: 2px; text-align: ' + (isMe ? 'right' : 'left') + ';';
+                    senderLabel.textContent = m.sender_name + ' (' + (m.sender_role || 'Staff') + ') ' + (m.time_formatted ? '- ' + m.time_formatted : '');
+                    
+                    const msgBubble = document.createElement('div');
+                    msgBubble.style.cssText = 'padding: 8px 12px; border-radius: 12px; font-size: var(--fs-xs); line-height: 1.4; background: ' + (isMe ? 'var(--blue)' : 'var(--white)') + '; color: ' + (isMe ? '#fff' : 'var(--navy)') + '; border: 1px solid ' + (isMe ? 'var(--blue)' : 'var(--line)') + '; box-shadow: 0 1px 2px rgba(0,0,0,0.05);';
+                    msgBubble.textContent = m.body;
+                    
+                    wrapper.appendChild(senderLabel);
+                    wrapper.appendChild(msgBubble);
+                    container.appendChild(wrapper);
+                });
+                container.scrollTop = container.scrollHeight;
+            }
+        }).catch(() => {});
+}
+
+{% if session.status in ('active', 'requested') %}
+setInterval(pollMessages, 3000);
+{% endif %}
+
+function openCompleteModal() {
+    const modal = document.getElementById('complete-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeCompleteModal() {
+    const modal = document.getElementById('complete-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function addMedicationRow() {
+    const container = document.getElementById('medications-container');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'med-row';
+    row.style.cssText = 'display: grid; grid-template-columns: 2fr 1.5fr 1fr 30px; gap: 6px; align-items: center;';
+    row.innerHTML = `
+        <input type="text" name="med_name[]" placeholder="Medicine Name" style="padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; outline: none;">
+        <input type="text" name="med_dosage[]" placeholder="Dosage" style="padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; outline: none;">
+        <input type="text" name="med_duration[]" placeholder="Duration" style="padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; outline: none;">
+        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--red); font-weight: 700; cursor: pointer; font-size: 16px;">&times;</button>
+    `;
+    container.appendChild(row);
+}
+</script>
+{% endblock %}

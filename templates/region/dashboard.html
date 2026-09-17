@@ -1,0 +1,111 @@
+{% extends "shell.html" %}
+{% block page_title %}Regional Command Dashboard - Anvaya Vistara{% endblock %}
+{% block sidebar_nav %}{% include "region/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: var(--sp-6) 0;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-4);">
+        <div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin: 0 0 4px;">
+                Regional Healthcare Command Dashboard
+            </h1>
+            <p style="color: var(--muted); font-size: var(--fs-sm); margin: 0;">
+                Comprehensive operational telemetry across regional hospital centers and primary health facilities.
+            </p>
+        </div>
+        <div>
+            <a href="/region/referrals" class="btn btn-primary" style="font-weight: 700; padding: 10px 18px; border-radius: 8px;">
+                Manage Active Referrals &rarr;
+            </a>
+        </div>
+    </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+        <div class="card" style="padding: var(--sp-5); background: var(--white); border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--primary);">
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 700; text-transform: uppercase;">Network Facilities</span>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--navy); margin-top: 4px;">{{ stats.total_facilities or 0 }}</div>
+            <span style="font-size: var(--fs-xs); color: var(--muted);">District Hospitals & PHCs</span>
+        </div>
+
+        <div class="card" style="padding: var(--sp-5); background: var(--white); border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid #16a34a;">
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 700; text-transform: uppercase;">Enrolled Patients</span>
+            <div style="font-size: 2rem; font-weight: 800; color: #16a34a; margin-top: 4px;">{{ stats.total_patients or 0 }}</div>
+            <span style="font-size: var(--fs-xs); color: var(--muted);">Regional Population Covered</span>
+        </div>
+
+        <div class="card" style="padding: var(--sp-5); background: var(--white); border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid #0284c7;">
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 700; text-transform: uppercase;">Active Clinical Staff</span>
+            <div style="font-size: 2rem; font-weight: 800; color: #0284c7; margin-top: 4px;">{{ stats.total_staff or 0 }}</div>
+            <span style="font-size: var(--fs-xs); color: var(--muted);">Doctors, Nurses & Specialists</span>
+        </div>
+
+        <div class="card" style="padding: var(--sp-5); background: var(--white); border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid #d97706;">
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 700; text-transform: uppercase;">Active Transfer Referrals</span>
+            <div style="font-size: 2rem; font-weight: 800; color: #d97706; margin-top: 4px;">{{ stats.active_referrals or 0 }}</div>
+            <span style="font-size: var(--fs-xs); color: var(--muted);">In Transit & Processing</span>
+        </div>
+    </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); margin-bottom: var(--sp-6);">
+
+                <div class="card panel" style="background: var(--white); border-radius: 12px; border: 1px solid var(--line); padding: var(--sp-6);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+                <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy); margin: 0;">
+                    Regional Facilities Directory
+                </h2>
+                <a href="/admin/facilities" style="font-size: var(--fs-xs); color: var(--primary); font-weight: 600; text-decoration: none;">View All &rarr;</a>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+                {% for f in facilities[:6] %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--line);">
+                    <div>
+                        <div style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm);">{{ f.name }}</div>
+                        <div style="font-size: var(--fs-xs); color: var(--muted);">{{ f.district or f.region or 'Main Region' }} &bull; {{ f.id }}</div>
+                    </div>
+                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 10px;">
+                        {{ f.type }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+                <div class="card panel" style="background: var(--white); border-radius: 12px; border: 1px solid var(--line); padding: var(--sp-6);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+                <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy); margin: 0;">
+                    Recent Transfer Activity
+                </h2>
+                <a href="/region/referrals" style="font-size: var(--fs-xs); color: var(--primary); font-weight: 600; text-decoration: none;">All Referrals &rarr;</a>
+            </div>
+
+            {% if recent_referrals and recent_referrals|length > 0 %}
+            <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+                {% for r in recent_referrals %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--line);">
+                    <div>
+                        <div style="font-weight: 700; color: var(--navy); font-size: var(--fs-sm);">
+                            REF-{{ r.id }}: {{ r.patient_name or r.patient_id }}
+                        </div>
+                        <div style="font-size: var(--fs-xs); color: var(--muted);">
+                            {{ r.from_center_name or r.from_center }} &rarr; {{ r.to_center_name or r.to_center }}
+                        </div>
+                    </div>
+                    <span class="badge" style="background: {% if r.status in ('initiated', 'in_transit') %}#fef3c7; color: #92400e;{% elif r.status == 'completed' %}#dcfce7; color: #166534;{% else %}#f1f5f9; color: #475569;{% endif %} font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 10px;">
+                        {{ r.status|replace('_', ' ')|title }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: var(--sp-6); color: var(--muted); font-size: var(--fs-sm);">
+                No recent referral transfers logged.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "shell.html" %}
+{% block page_title %}Regional Admissions & Triage{% endblock %}
+{% block sidebar_nav %}{% include "region/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: var(--sp-6) 0;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-4);">
+        <div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin: 0 0 4px;">
+                Admissions & Active Patient Triage
+            </h1>
+            <p style="color: var(--muted); font-size: var(--fs-sm); margin: 0;">
+                Live inpatient bed occupancies, emergency triage admissions, and clinical ward assignments across region.
+            </p>
+        </div>
+    </div>
+
+    <div class="card panel" style="background: var(--white); border-radius: 12px; border: 1px solid var(--line); padding: var(--sp-6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3);">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--navy); margin: 0;">
+                Currently Admitted & In-Consultation Patients
+            </h2>
+            <span style="font-size: var(--fs-xs); color: var(--muted); font-weight: 600;">{{ patients|length }} active cases</span>
+        </div>
+
+        {% if patients and patients|length > 0 %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: var(--fs-sm);">
+                <thead>
+                    <tr style="background: var(--bg-surface); text-align: left; color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase;">
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Token #</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Patient Name</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Facility</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Department / Ward</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Attending Doctor</th>
+                        <th style="padding: 12px 14px; border-bottom: 2px solid var(--line);">Triage Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in patients %}
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px 14px; font-weight: 700; font-family: var(--mono); color: var(--navy);">
+                            #{{ p.token_number or p.id }}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <div style="font-weight: 600; color: var(--navy);">{{ p.patient_name }}</div>
+                            <small style="color: var(--muted);">{{ p.gender }}, Blood: {{ p.blood_group or 'N/A' }}</small>
+                        </td>
+                        <td style="padding: 12px 14px; color: var(--navy); font-size: var(--fs-xs);">
+                            {{ p.center_name or p.center_id }}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            {{ p.department or 'General OPD' }}
+                        </td>
+                        <td style="padding: 12px 14px; color: var(--navy);">
+                            {{ p.doctor_name or 'On-Duty Medical Officer' }}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <span class="badge" style="background: {% if p.status == 'in_progress' %}#dcfce7; color: #166534;{% else %}#fef3c7; color: #92400e;{% endif %} font-weight: 700; padding: 4px 10px; border-radius: 12px;">
+                                {{ p.status|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--sp-8); color: var(--muted);">
+            <h3>No active admissions or triage cases recorded at this time.</h3>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

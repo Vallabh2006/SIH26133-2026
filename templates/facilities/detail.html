@@ -1,0 +1,182 @@
+{% extends "shell.html" %}
+{% block page_title %}{{ facility.name }} - Healthcare Facility Profile{% endblock %}
+
+{% block sidebar_nav %}
+{% if current_user %}
+    {% if current_user.role == 'patient' %}{% include "patient/_nav.html" %}
+    {% elif current_user.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'therapist', 'pharmacist', 'lab_technician', 'receptionist') %}{% include "phc/_nav.html" %}
+    {% elif current_user.role == 'region_admin' %}{% include "region/_nav.html" %}
+    {% elif current_user.role == 'system_admin' %}{% include "admin/_nav.html" %}
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div style="display: flex; align-items: center; gap: var(--sp-2);">
+            <h1 style="margin: 0;">{{ facility.name }}</h1>
+            <span style="background: var(--sky); color: var(--navy); padding: 3px 8px; border-radius: 6px; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 700;">
+                {{ facility.id }}
+            </span>
+            <span style="background: rgba(42, 157, 143, 0.15); color: #2a9d8f; padding: 3px 8px; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700;">
+                Active Facility
+            </span>
+        </div>
+        <p class="text-muted" style="margin-top: 4px;">{{ facility.type }} Centre - {{ facility.region }} Region, {{ facility.state or 'State' }}</p>
+    </div>
+    <div style="display: flex; gap: var(--sp-3);">
+        {% if current_user.role in ('doctor', 'nurse', 'system_admin') and current_user.center_id == facility.id %}
+            <a href="/phc/@{{ current_user.username }}" class="btn" style="background: var(--blue); color: #fff;">
+                 Facility Dashboard
+            </a>
+        {% endif %}
+                <a href="https://www.google.com/maps/dir/?api=1&destination={{ facility.lat }},{{ facility.lng }}" target="_blank" class="btn" style="background: var(--blue); color: #fff;">
+             Get Directions ->
+        </a>
+<a href="javascript:history.back()" class="btn outline"><- {{ _('common.back') }}</a>
+    </div>
+</div>
+
+<div class="cards" style="margin-bottom: var(--sp-6);">
+    <div class="card">
+
+        <div class="card-label">Facility Classification</div>
+        <div class="card-value" style="font-size: 1.1rem; color: var(--navy);">{{ facility.type }} Centre</div>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Level: {{ facility.type }} Standard</span>
+    </div>
+
+    <div class="card">
+
+        <div class="card-label">Region & Location</div>
+        <div class="card-value" style="font-size: 1.1rem;">{{ facility.district or facility.region }}</div>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Coordinates: {{ facility.lat }}, {{ facility.lng }}</span>
+    </div>
+
+    <div class="card">
+
+        <div class="card-label">Assigned Population</div>
+        <div class="card-value" style="font-size: 1.1rem;">{{ patient_count }} Patients</div>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Registered Beneficiaries</span>
+    </div>
+
+    <div class="card">
+
+        <div class="card-label">Clinical Staff</div>
+        <div class="card-value" style="font-size: 1.1rem;">{{ staff_members|length }} Staff</div>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Doctors & Care Providers</span>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); margin-bottom: var(--sp-6);">
+
+    <div class="panel">
+        <h3 style="margin: 0 0 var(--sp-4); color: var(--navy); font-size: var(--fs-md);"> Location & Contact Details</h3>
+
+        <div style="display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-sm);">
+            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+                <span style="color: var(--muted);">Center ID:</span>
+                <strong style="font-family: var(--mono); color: var(--navy);">{{ facility.id }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+                <span style="color: var(--muted);">Facility Name:</span>
+                <strong>{{ facility.name }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+                <span style="color: var(--muted);">Region / State:</span>
+                <strong>{{ facility.region }}, {{ facility.state or 'State' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+                <span style="color: var(--muted);">Emergency Hotline:</span>
+                <strong>{{ facility.phone or '104 (National Health Toll-Free)' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--muted);">GPS Coordinates:</span>
+                <span style="font-family: var(--mono); color: var(--navy);">{{ facility.lat }}, {{ facility.lng }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+            <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);"> Clinical Staff Members</h3>
+            <span style="font-size: var(--fs-xs); color: var(--muted);">Total: {{ staff_members|length }}</span>
+        </div>
+
+        {% if staff_members %}
+            <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+            {% for s in staff_members %}
+                <div style="padding: var(--sp-3); border-radius: var(--radius); background: var(--bg); border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ s.full_name }}</strong>
+                        <div style="font-size: var(--fs-xs); color: var(--muted);">{{ s.email or s.phone or 'No direct contact' }}</div>
+                    </div>
+                    <div>
+                        <span style="background: var(--sky); color: var(--navy); padding: 3px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; font-weight: 600;">
+                            {{ s.role }}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="padding: var(--sp-4) 0;">
+
+                <p style="font-size: var(--fs-xs); color: var(--muted); margin: 0;">No staff assigned to this facility yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if current_user and current_user.role != 'patient' %}
+
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);"> Essential Medicine & Equipment Stock</h3>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Total Items: {{ inventory_items|length }}</span>
+    </div>
+
+    {% if inventory_items %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: var(--fs-sm);">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--line); text-align: left;">
+                        <th style="padding: var(--sp-2);">Item Name</th>
+                        <th style="padding: var(--sp-2);">Category</th>
+                        <th style="padding: var(--sp-2);">Stock Available</th>
+                        <th style="padding: var(--sp-2);">Unit</th>
+                        <th style="padding: var(--sp-2);">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventory_items %}
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: var(--sp-2); font-weight: 600; color: var(--navy);">{{ item.item_name }}</td>
+                        <td style="padding: var(--sp-2); color: var(--muted);">{{ item.category or 'Medicine' }}</td>
+                        <td style="padding: var(--sp-2); font-weight: 700;">{{ item.quantity }}</td>
+                        <td style="padding: var(--sp-2); color: var(--muted);">{{ item.unit or 'units' }}</td>
+                        <td style="padding: var(--sp-2);">
+                            {% if item.quantity <= item.reorder_level %}
+                                <span style="background: rgba(230, 57, 70, 0.15); color: #d62828; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    Low Stock
+                                </span>
+                            {% else %}
+                                <span style="background: rgba(42, 157, 143, 0.15); color: #2a9d8f; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    In Stock
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state" style="padding: var(--sp-4) 0;">
+
+            <p style="font-size: var(--fs-xs); color: var(--muted); margin: 0;">No inventory records found for this facility.</p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "shell.html" %}
+{% block page_title %}Security & System Audit Logs - Admin{% endblock %}
+{% block sidebar_nav %}{% include "admin/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 style="display: flex; align-items: center; gap: var(--sp-2);">
+            Security & Clinical Audit Logs
+        </h1>
+        <p class="text-muted">Immutable system audit trail tracking authentication, EHR updates, patient consults, and administrative actions</p>
+    </div>
+    <div style="display: flex; gap: var(--sp-2);">
+        <a href="/admin/audit-logs/export?action={{ action_filter }}&q={{ search_q }}" class="btn" style="background: var(--navy); color: #fff;">
+            Export Audit Trail CSV
+        </a>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom: var(--sp-6); padding: var(--sp-4);">
+    <form method="GET" action="/admin/audit-logs" style="display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
+        <div style="min-width: 200px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                Filter by Event Action
+            </label>
+            <select name="action" onchange="this.form.submit()" style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm); background: var(--white);">
+                <option value="all" {% if not action_filter or action_filter == 'all' %}selected{% endif %}>All System Actions</option>
+                {% for act in actions_list %}
+                    <option value="{{ act }}" {% if action_filter == act %}selected{% endif %}>{{ act | upper }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex: 1; min-width: 220px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                Search Audit Trail
+            </label>
+            <input type="text" name="q" value="{{ search_q }}" placeholder="Search by user, action, IP, entity ID..." style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+        </div>
+
+        <div>
+            <button type="submit" class="btn sm" style="height: 38px;">Filter Logs</button>
+            <a href="/admin/audit-logs" class="btn sm outline" style="height: 38px;">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);">
+            Event Audit Trail ({{ logs|length }} Entries)
+        </h3>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Showing latest security events</span>
+    </div>
+
+    {% if logs %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--bg);">
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Timestamp</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Actor / User</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Action Type</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Target Entity</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Details / Notes</th>
+                    <th style="text-align: right; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Source IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: var(--fs-xs); color: var(--navy); white-space: nowrap;">
+                        {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs);">
+                        {% if log.user_name %}
+                            <strong style="color: var(--navy);">{{ log.user_name }}</strong><br>
+                            <span style="color: var(--muted); font-family: var(--mono);">@{{ log.actor_username }} ({{ log.user_role }})</span>
+                        {% elif log.user_id %}
+                            <strong style="color: var(--navy);">User #{{ log.user_id }}</strong>
+                        {% else %}
+                            <span style="color: var(--muted); font-style: italic;">Anonymous / System</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line);">
+                        <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; background: {% if log.action in ('login', 'auth') %}#dcfce7; color: #166534;{% elif log.action == 'logout' %}#f1f5f9; color: #475569;{% elif log.action in ('consultation', 'prescription', 'record_create') %}#e0f2fe; color: #0369a1;{% elif log.action in ('signup', 'register') %}#fef3c7; color: #92400e;{% else %}var(--sky); color: var(--navy);{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs);">
+                        <span style="font-weight: 600; color: var(--navy);">{{ log.entity_type or 'system' }}</span>
+                        {% if log.entity_id %}
+                            <span style="color: var(--muted); font-family: var(--mono);">#{{ log.entity_id }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs); color: var(--ink);">
+                        {{ log.detail or '-' }}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); text-align: right; font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted);">
+                        {{ log.ip_address or 'N/A' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty-state" style="padding: var(--sp-6) 0;">
+            <h3>No Audit Logs Found</h3>
+            <p style="font-size: var(--fs-xs); color: var(--muted);">No audit events match the selected criteria.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends "shell.html" %}
+{% block page_title %}User Accounts Directory - Admin{% endblock %}
+{% block sidebar_nav %}{% include "admin/_nav.html" %}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: var(--sp-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-4);">
+    <div>
+        <h1 style="margin: 0 0 4px; font-size: var(--fs-xl); color: var(--navy); font-weight: 700;">User Accounts Directory</h1>
+        <p style="margin: 0; color: var(--muted); font-size: var(--fs-sm);">
+            Complete registry of patient, staff, medical officer, and system administrator accounts
+        </p>
+    </div>
+    <div style="display: flex; gap: var(--sp-3);">
+        <a href="/admin/staff" class="btn" style="background: var(--blue); color: #fff; font-weight: 600; padding: 9px 18px; border-radius: var(--radius);">
+            Go to Staff Management Panel
+        </a>
+    </div>
+</div>
+
+<div class="cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6);">
+    <div class="card">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Total Users</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: var(--navy);">{{ users|length }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Registered accounts</div>
+    </div>
+
+    <div class="card">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Patients</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: var(--blue);">{{ role_stats.get('patient', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Self-registered profiles</div>
+    </div>
+
+    <div class="card">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Doctors</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #0284c7;">{{ role_stats.get('doctor', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Clinical physicians</div>
+    </div>
+
+    <div class="card">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Nurses</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #16a34a;">{{ role_stats.get('nurse', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Care personnel</div>
+    </div>
+
+    <div class="card">
+        <div style="font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Admins</div>
+        <div style="font-size: var(--fs-2xl); font-weight: 800; color: #dc2626;">{{ role_stats.get('system_admin', 0) + role_stats.get('region_admin', 0) }}</div>
+        <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">System governance</div>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom: var(--sp-6);">
+    <form method="GET" action="/admin/users" style="display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 1; min-width: 150px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                Filter by Role
+            </label>
+            <select name="role" style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+                <option value="all">All Roles</option>
+                <option value="patient" {% if role_filter == 'patient' %}selected{% endif %}>Patient</option>
+                <option value="doctor" {% if role_filter == 'doctor' %}selected{% endif %}>Doctor</option>
+                <option value="nurse" {% if role_filter == 'nurse' %}selected{% endif %}>Nurse</option>
+                <option value="pharmacist" {% if role_filter == 'pharmacist' %}selected{% endif %}>Pharmacist</option>
+                <option value="lab_technician" {% if role_filter == 'lab_technician' %}selected{% endif %}>Lab Technician</option>
+                <option value="ambulance_op" {% if role_filter == 'ambulance_op' %}selected{% endif %}>Ambulance Operator</option>
+                <option value="receptionist" {% if role_filter == 'receptionist' %}selected{% endif %}>Receptionist</option>
+                <option value="care_taker" {% if role_filter == 'care_taker' %}selected{% endif %}>Care Taker / ASHA</option>
+                <option value="region_admin" {% if role_filter == 'region_admin' %}selected{% endif %}>Region Admin</option>
+                <option value="system_admin" {% if role_filter == 'system_admin' %}selected{% endif %}>System Admin</option>
+            </select>
+        </div>
+
+        <div style="flex: 1.2; min-width: 180px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                Filter by Facility
+            </label>
+            <select name="center_id" style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+                <option value="all">All Facilities</option>
+                {% for c in centers %}
+                    <option value="{{ c.id }}" {% if center_filter == c.id %}selected{% endif %}>
+                        {{ c.name }} ({{ c.id }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex: 1.5; min-width: 200px;">
+            <label style="display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                Search User
+            </label>
+            <input type="text" name="q" value="{{ search_q }}" placeholder="Search by name, username, email, phone..." style="width: 100%; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--line); font-size: var(--fs-sm);">
+        </div>
+
+        <div>
+            <button type="submit" class="btn sm" style="height: 38px;">Apply Filter</button>
+            <a href="/admin/users" class="btn sm outline" style="height: 38px;">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <h3 style="margin: 0; color: var(--navy); font-size: var(--fs-md);">
+            User Accounts Directory ({{ users|length }})
+        </h3>
+        <span style="font-size: var(--fs-xs); color: var(--muted);">Showing active accounts</span>
+    </div>
+
+    {% if users %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--bg);">
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">User Profile</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Role</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Assigned Facility</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Contact Details</th>
+                    <th style="text-align: left; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Status</th>
+                    <th style="text-align: right; padding: var(--sp-3); border-bottom: 2px solid var(--line); font-size: var(--fs-xs);">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line);">
+                        <div style="display: flex; align-items: center; gap: var(--sp-3);">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--sky); color: var(--navy); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--fs-sm); flex-shrink: 0;">
+                                {{ (u.full_name[0] if u.full_name else 'U') | upper }}
+                            </div>
+                            <div>
+                                <strong style="color: var(--navy); font-size: var(--fs-sm);">{{ u.full_name }}</strong><br>
+                                <span style="font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono);">@{{ u.username }} (ID #{{ u.id }})</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line);">
+                        {% if u.role == 'doctor' %}
+                            <span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">DOCTOR</span>
+                        {% elif u.role == 'nurse' %}
+                            <span style="background: #f0fdf4; color: #166534; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">NURSE</span>
+                        {% elif u.role == 'patient' %}
+                            <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">PATIENT</span>
+                        {% elif u.role == 'system_admin' %}
+                            <span style="background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">SYS ADMIN</span>
+                        {% elif u.role == 'region_admin' %}
+                            <span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">REGION ADMIN</span>
+                        {% elif u.role == 'ambulance_op' %}
+                            <span style="background: #fef2f2; color: #991b1b; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">AMBULANCE</span>
+                        {% else %}
+                            <span style="background: var(--sky); color: var(--navy); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">{{ u.role | upper }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs);">
+                        {% if u.facility_name %}
+                            <strong style="color: var(--navy);">{{ u.facility_name }}</strong><br>
+                            <span style="color: var(--muted); font-family: var(--mono);">{{ u.center_id }}</span>
+                        {% elif u.center_id %}
+                            <strong style="color: var(--navy);">{{ u.center_id }}</strong>
+                        {% else %}
+                            <span style="color: var(--muted); font-style: italic;">All / Regional Headquarters</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-xs);">
+                        <span>{{ u.phone or 'No phone' }}</span><br>
+                        <span style="color: var(--muted);">{{ u.email or 'No email' }}</span>
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line);">
+                        {% if u.is_active %}
+                            <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">Active</span>
+                        {% else %}
+                            <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: var(--sp-3); border-bottom: 1px solid var(--line); text-align: right;">
+                        {% if u.role == 'patient' %}
+                            <a href="/patient/@{{ u.username }}" class="btn sm outline" style="font-size: 11px; padding: 3px 8px;">View Patient EHR</a>
+                        {% elif u.role in ('doctor', 'nurse', 'helper', 'ambulance_op', 'care_taker', 'pharmacist', 'lab_technician') %}
+                            <a href="/phc/@{{ u.username }}" class="btn sm outline" style="font-size: 11px; padding: 3px 8px;">View Staff Profile</a>
+                        {% else %}
+                            <span style="font-size: 11px; color: var(--muted);">System User</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty-state" style="padding: var(--sp-6) 0; text-align: center;">
+            <h3 style="color: var(--navy);">No Users Found</h3>
+            <p style="font-size: var(--fs-xs); color: var(--muted);">No user accounts match the current filter or search criteria.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

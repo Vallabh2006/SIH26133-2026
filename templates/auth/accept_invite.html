@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Accept Staff Invitation - {{ _('app.name') }}{% endblock %}
+
+{% block body %}
+<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); padding: var(--sp-6);">
+    <div class="card" style="max-width: 480px; width: 100%; padding: var(--sp-8); box-shadow: 0 10px 30px rgba(0,0,0,0.06); border-radius: 16px; border: 1px solid var(--line); background: var(--white);">
+
+        <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(20, 121, 169, 0.1); color: var(--blue); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--sp-4);">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+        </div>
+
+        <div style="text-align: center; margin-bottom: var(--sp-5);">
+            <h2 style="margin: 0 0 6px; font-size: 1.4rem; color: var(--navy); font-weight: 700;">Staff Onboarding</h2>
+            <p style="color: var(--muted); margin: 0; font-size: var(--fs-sm);">
+                Activate your account to access clinical modules and patient records
+            </p>
+        </div>
+
+        <div style="background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: var(--sp-4); margin-bottom: var(--sp-5);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: var(--fs-xs);">
+                <span style="color: var(--muted);">Staff Member:</span>
+                <strong style="color: var(--navy);">{{ user.full_name }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: var(--fs-xs);">
+                <span style="color: var(--muted);">Assigned Role:</span>
+                <span style="font-weight: 700; color: var(--blue); text-transform: uppercase;">{{ user.role | replace('_', ' ') }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: var(--fs-xs);">
+                <span style="color: var(--muted);">Assigned Facility:</span>
+                <strong style="color: var(--navy);">{{ user.facility_name or user.center_id or 'Regional Network' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: var(--fs-xs);">
+                <span style="color: var(--muted);">Username:</span>
+                <code style="font-family: var(--mono); color: var(--navy);">@{{ user.username }}</code>
+            </div>
+        </div>
+
+        <form method="POST" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label for="phone" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                    Phone Number
+                </label>
+                <input type="tel" id="phone" name="phone" value="{{ user.phone or '' }}" placeholder="e.g. +91 9876543210"
+                       style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label for="password" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                    Set Permanent Password <span style="color: var(--red);">*</span>
+                </label>
+                <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Minimum 8 characters"
+                       style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div class="field" style="display: flex; flex-direction: column; gap: 4px;">
+                <label for="confirm_password" style="font-size: var(--fs-sm); font-weight: 600; color: var(--navy);">
+                    Confirm Password <span style="color: var(--red);">*</span>
+                </label>
+                <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password" placeholder="Re-enter permanent password"
+                       style="width: 100%; height: 42px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--white); outline: none; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" class="btn lg" style="width: 100%; font-weight: 600; background: var(--blue); color: #fff; height: 46px; border-radius: 8px; border: none; font-size: var(--fs-base); cursor: pointer; margin-top: 4px;">
+                Accept Invitation & Sign In
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: var(--sp-5);">
+            <a href="{{ url_for('auth.login') }}" style="font-size: var(--fs-xs); color: var(--muted); text-decoration: none;">
+                Already activated? Go to Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+<li class="sidebar-section-title">{{ _('nav.phc_ops') }}</li>
+<a href="/phc/@{{ current_user.username if current_user else '' }}" class="navitem {% if request.path.startswith('/phc/@') or request.path == '/phc/dashboard' or request.path == '/phc/' or request.path == '/dashboard/phc' or request.path == '/dashboard/doctor' or request.path == '/dashboard/staff' %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.dashboard') }}</span>
+</a>
+{% if can('view_appointments') %}
+<a href="/phc/appointments" class="navitem {% if request.path == '/phc/appointments' or request.path == '/phc/queue' %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.appointments_queue') }}</span>
+</a>
+{% endif %}
+{% if can('teleconsult') %}
+<a href="/phc/teleconsult" class="navitem {% if request.path == '/phc/contact' or request.path == '/phc/teleconsult' %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.teleconsult') }} <span style="font-size: 9px; text-transform: uppercase; background: rgba(56,189,248,0.15); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 4px;">{{ _('nav.soon') }}</span></span>
+</a>
+{% endif %}
+{% if can('view_inventory') %}
+<a href="/phc/inventory" class="navitem {% if request.path == '/phc/inventory' %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.inventory') }}</span>
+</a>
+{% endif %}
+{% if can('manage_referrals') %}
+<a href="/phc/referrals" class="navitem {% if request.path == '/phc/referrals' %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.referrals') }}</span>
+</a>
+{% endif %}
+
+<li class="sidebar-section-title">{{ _('nav.shared_services') }}</li>
+{% if can('view_records') or can('register_patient') or (current_user and current_user.role in ('system_admin', 'region_admin')) %}
+<a href="/patient/" class="navitem {% if request.path.startswith('/patient') %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.patients') }}</span>
+</a>
+{% endif %}
+<a href="/facilities" class="navitem {% if request.path.startswith('/facilities') %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.facilities') }}</span>
+</a>
+<a href="/notifications/@{{ current_user.username if current_user else '' }}" class="navitem {% if request.path.startswith('/notifications') %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.notifications') }}</span>
+</a>
+<a href="/settings/@{{ current_user.username if current_user else '' }}" class="navitem {% if request.path.startswith('/settings') %}active{% endif %}">
+    <span class="nav-label">{{ _('nav.settings') }}</span>
+</a>
