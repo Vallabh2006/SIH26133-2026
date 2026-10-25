@@ -107,7 +107,7 @@ function checkClientThrottling(targetUrl) {
   const now = Date.now();
   _clientReqTracker = _clientReqTracker.filter(item => now - item.time < 30000);
   const hits = _clientReqTracker.filter(item => item.url === targetUrl);
-  if (hits.length >= 15) {
+  if (hits.length >= 60) {
     const oldest = hits[0].time;
     const retrySec = Math.max(1, Math.ceil((30000 - (now - oldest)) / 1000));
     return { limited: true, retrySec };
@@ -316,23 +316,28 @@ function initNotifications() {
   if (!bell) return;
 
   async function pollNotifications() {
-    const res = await api.get('/api/notifications?unread=1');
-    if (res?.ok && res.data) {
-      const count = res.data.count || 0;
-      const badge = bell.querySelector('.badge');
-      if (count > 0) {
-        if (badge) {
-          badge.textContent = count > 9 ? '9+' : count;
-          badge.style.display = 'flex';
+    try {
+      const res = await api.get('/api/notifications?unread=1');
+      if (res?.ok && res.data) {
+        const count = res.data.count || 0;
+        const badge = bell.querySelector('.badge');
+        if (count > 0) {
+          if (badge) {
+            badge.textContent = count > 9 ? '9+' : count;
+            badge.style.display = 'flex';
+          }
+        } else if (badge) {
+          badge.style.display = 'none';
         }
-      } else if (badge) {
-        badge.style.display = 'none';
       }
-    }
+    } catch (e) {}
   }
 
+  // Load notifications once on page load without continuous background polling
   pollNotifications();
-  notifInterval = setInterval(pollNotifications, 30000);
+  bell.addEventListener('click', () => {
+    setTimeout(pollNotifications, 500);
+  });
 }
 
 function toggleSidebar(forceState) {
@@ -350,16 +355,7 @@ function toggleSidebar(forceState) {
     document.body.classList.add('sidebar-open');
     document.body.style.overflow = 'hidden';
     syncSwipeRefreshState();
-    if (typeof InstantNav !== 'undefined') {
-      setTimeout(() => {
-        const links = sidebar.querySelectorAll('a[href]');
-        links.forEach(link => {
-          if (typeof InstantNav.isEligibleLink === 'function' && InstantNav.isEligibleLink(link)) {
-            InstantNav.prefetch(link.href);
-          }
-        });
-      }, 50);
-    }
+
   } else {
     sidebar.classList.remove('open');
     if (backdrop) backdrop.classList.remove('show');
@@ -681,23 +677,12 @@ const InstantNav = (function () {
     document.documentElement.classList.remove('sidebar-open');
     document.body.classList.remove('sidebar-open');
     document.body.style.overflow = '';
-    // Touchstart / Pointerenter prefetching for 0ms transitions
-    document.addEventListener('pointerenter', (e) => {
-      const link = e.target.closest('a');
-      if (isEligibleLink(link)) {
-        prefetch(link.href);
-      }
-    }, { passive: true, capture: true });
 
     document.addEventListener('touchstart', (e) => {
       syncSwipeRefreshState(e.target);
-      const link = e.target.closest('a');
-      if (isEligibleLink(link)) {
-        prefetch(link.href);
-      }
     }, { passive: true, capture: true });
 
-    // Intercept clicks on eligible links
+    // Intercept clicks on eligible links for instantaneous fast swap
     document.addEventListener('click', (e) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
         return;
@@ -746,15 +731,19 @@ const InstantNav = (function () {
   }, true);
 })();
 
-// Real-Time Dashboard Live Invalidation & Sync
+// Real-Time Dashboard Sync on tab focus
 (function initDashboardAutoSync() {
   const path = window.location.pathname;
   const isDashboard = path.includes('/dashboard') || path === '/phc' || path.startsWith('/phc/');
   if (!isDashboard) return;
 
   let currentVer = null;
+  let lastCheckedTime = 0;
 
   async function checkVersion() {
+    const now = Date.now();
+    if (now - lastCheckedTime < 60000) return; // Throttle to at most once per minute
+    lastCheckedTime = now;
     try {
       const res = await fetch('/api/dashboard/version', { credentials: 'same-origin' });
       if (!res.ok) return;
@@ -771,17 +760,11 @@ const InstantNav = (function () {
         }, 1200);
       }
     } catch (e) {
-      // Ignore network blips during polling
+      // Ignore network blips
     }
   }
 
-  // Initial check
-  checkVersion();
-
-  // Poll every 25s
-  setInterval(checkVersion, 25000);
-
-  // Check immediately when user switches back to this tab
+  // Check on tab visible switch
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkVersion();

@@ -1,10 +1,16 @@
 import os
 import re
+import queue
+import threading
 from flask import g, current_app
 import pg8000.dbapi
 from utils.logger import get_logger
 
 logger = get_logger("db")
+
+_POOL_MAX_SIZE = 15
+_connection_pool = queue.Queue(maxsize=_POOL_MAX_SIZE)
+_pool_lock = threading.Lock()
 
 
 def get_pg_config(app=None):
@@ -41,6 +47,7 @@ def create_connection():
                 password=env.password,
                 database=env.database,
                 ssl_context=None,
+                timeout=5,
             )
         except Exception as e:
             logger.warning("Hyperdrive connection failed (%s), falling back to direct connection", e)
@@ -58,6 +65,7 @@ def create_connection():
                 password=cfg["password"],
                 database=cfg["database"],
                 ssl_context=use_ssl,
+                timeout=5,
             )
         except Exception as e:
             if "refuses SSL" in str(e) or "Server refuses SSL" in str(e):
@@ -68,11 +76,27 @@ def create_connection():
                     password=cfg["password"],
                     database=cfg["database"],
                     ssl_context=None,
+                    timeout=5,
                 )
             else:
                 raise
 
     return conn
+
+
+def _is_connection_alive(conn):
+    if conn is None:
+        return False
+    try:
+        # Check if underlying socket is intact
+        sock = getattr(conn, "_sock", None)
+        if sock is None:
+            return True
+        if hasattr(sock, "fileno") and sock.fileno() == -1:
+            return False
+        return True
+    except Exception:
+        return False
 
 
 def get_db(force_reconnect=False):
@@ -82,9 +106,30 @@ def get_db(force_reconnect=False):
                 g.db_conn.close()
             except Exception:
                 pass
-        g.pop("db_conn", None)
-        g.pop("db_cursor", None)
-        g.db_conn = create_connection()
+            g.pop("db_conn", None)
+            g.pop("db_cursor", None)
+
+        conn = None
+        if not force_reconnect:
+            # Try to get an idle connection from the pool
+            while not _connection_pool.empty():
+                try:
+                    candidate = _connection_pool.get_nowait()
+                    if _is_connection_alive(candidate):
+                        conn = candidate
+                        break
+                    else:
+                        try:
+                            candidate.close()
+                        except Exception:
+                            pass
+                except queue.Empty:
+                    break
+
+        if conn is None:
+            conn = create_connection()
+
+        g.db_conn = conn
 
     if "db_cursor" not in g or force_reconnect:
         g.db_cursor = g.db_conn.cursor()
@@ -112,7 +157,7 @@ def query_db(query, args=(), one=False, retries=1):
                 "eof", "none", "bad file", "timeout", "network"
             ])
             if is_conn_error and attempt < retries:
-                logger.warning("Database socket error (%s), reconnecting and retrying...", e)
+                logger.warning("Database socket error (%s), reconnecting and retrying (attempt %d)...", e, attempt + 1)
                 continue
 
             logger.error("Database Query Error: %s | Query: %s | Args: %s", e, query, args)
@@ -154,9 +199,9 @@ def execute_db(query, args=(), retries=1):
             try:
                 table_match = re.search(r"^(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+([a-zA-Z0-9_]+)", stripped, re.IGNORECASE)
                 mutated_table = table_match.group(1).lower() if table_match else ""
-                
+
                 ignored_tables = {"audit_logs", "notifications", "system_events", "access_logs", "login_attempts"}
-                if mutated_table not in ignored_tables:
+                if mutated_table and mutated_table not in ignored_tables:
                     from utils.cache import invalidate_cache
                     invalidate_cache()
             except Exception:
@@ -171,7 +216,7 @@ def execute_db(query, args=(), retries=1):
                 "eof", "none", "bad file", "timeout", "network"
             ])
             if is_conn_error and attempt < retries:
-                logger.warning("Database socket error during execute (%s), reconnecting and retrying...", e)
+                logger.warning("Database socket error during execute (%s), reconnecting and retrying (attempt %d)...", e, attempt + 1)
                 continue
 
             logger.error("Database Execute Error: %s | Query: %s | Args: %s", e, query, args)
@@ -194,6 +239,25 @@ def close_db(e=None):
     conn = g.pop("db_conn", None)
     if conn is not None:
         try:
+            if e is not None:
+                conn.rollback()
+            else:
+                try:
+                    conn.rollback()  # Clean up any open uncommitted read state
+                except Exception:
+                    pass
+
+            # Return connection to pool if healthy, else close
+            if _is_connection_alive(conn) and not _connection_pool.full():
+                try:
+                    _connection_pool.put_nowait(conn)
+                    return
+                except queue.Full:
+                    pass
+
             conn.close()
         except Exception:
-            pass
+            try:
+                conn.close()
+            except Exception:
+                pass

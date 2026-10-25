@@ -1,14 +1,16 @@
 import time
+import threading
 from collections import defaultdict
-from flask import request, jsonify, redirect, flash
+from flask import request, jsonify, redirect, flash, current_app
 from utils.security import get_client_ip
 from utils.logger import get_logger
 
 logger = get_logger("rate_limiter")
 
-RATE_LIMIT_WINDOW = 30
-RATE_LIMIT_MAX_REQUESTS = 15
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX_REQUESTS = 120
 
+_rate_limit_lock = threading.Lock()
 _request_history = defaultdict(list)
 _last_cleanup = 0
 
@@ -17,29 +19,30 @@ def is_rate_limited(key: str, max_requests: int = RATE_LIMIT_MAX_REQUESTS, windo
     global _last_cleanup
     now = time.time()
 
-    if now - _last_cleanup > 60:
-        _cleanup_expired(now, window_seconds)
-        _last_cleanup = now
+    with _rate_limit_lock:
+        if now - _last_cleanup > 60:
+            _cleanup_expired(now, window_seconds)
+            _last_cleanup = now
 
-    timestamps = _request_history[key]
-    cutoff = now - window_seconds
-    _request_history[key] = [t for t in timestamps if t > cutoff]
-    timestamps = _request_history[key]
+        timestamps = _request_history[key]
+        cutoff = now - window_seconds
+        _request_history[key] = [t for t in timestamps if t > cutoff]
+        timestamps = _request_history[key]
 
-    if len(timestamps) >= max_requests:
-        oldest = timestamps[0]
-        retry_after = max(1, int(window_seconds - (now - oldest)) + 1)
-        return True, retry_after, 0
+        if len(timestamps) >= max_requests:
+            oldest = timestamps[0]
+            retry_after = max(1, int(window_seconds - (now - oldest)) + 1)
+            return True, retry_after, 0
 
-    timestamps.append(now)
-    remaining = max_requests - len(timestamps)
-    return False, 0, remaining
+        timestamps.append(now)
+        remaining = max_requests - len(timestamps)
+        return False, 0, remaining
 
 
 def _cleanup_expired(now: float, window_seconds: int):
     cutoff = now - (window_seconds * 2)
     keys_to_delete = []
-    for k, times in _request_history.items():
+    for k, times in list(_request_history.items()):
         valid = [t for t in times if t > cutoff]
         if valid:
             _request_history[k] = valid
@@ -50,12 +53,19 @@ def _cleanup_expired(now: float, window_seconds: int):
 
 
 def check_custom_rate_limit():
+    if current_app and not current_app.config.get("RATELIMIT_ENABLED", True):
+        return None
+
+    # Completely bypass rate limiting on safe read-only browsing methods
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return None
+
     path = request.path or "/"
 
     if (
         path.startswith("/static/")
         or path.startswith("/public/")
-        or path in ("/favicon.ico", "/service-worker.js", "/manifest.json", "/api/health")
+        or path in ("/favicon.ico", "/service-worker.js", "/manifest.json", "/api/health", "/api/time")
     ):
         return None
 
@@ -81,7 +91,7 @@ def check_custom_rate_limit():
             "status": "error",
             "rate_limited": True,
             "error": "Rate limit exceeded",
-            "message": f"Rate limit reached: Maximum 15 requests per 30 seconds. Please wait {retry_after}s.",
+            "message": f"Too many requests. Please wait {retry_after}s.",
             "retry_after": retry_after,
             "limit": RATE_LIMIT_MAX_REQUESTS,
             "window": RATE_LIMIT_WINDOW
@@ -93,7 +103,7 @@ def check_custom_rate_limit():
         resp.headers["X-RateLimit-Reset"] = str(retry_after)
         return resp
 
-    flash(f"Rate limit reached: Maximum 15 requests per 30 seconds. Please wait {retry_after}s before trying again.", "warning")
+    flash(f"Rate limit reached. Please wait {retry_after}s before trying again.", "warning")
 
     target = request.referrer or request.path
     if request.method == "GET" and (not request.referrer or request.referrer == request.url):

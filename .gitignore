@@ -4,10 +4,6 @@
 .env.*
 !.env.example
 
-# Wrangler config (contains secrets)
-
-# Config files
-
 # Virtual Environments
 myenv/
 venv/
@@ -18,7 +14,7 @@ ENV/
 # Python Cache & Bytecode
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 *.so
 .Python
 build/
@@ -58,10 +54,12 @@ Thumbs.db
 *.swp
 *.swo
 *~
+*.bak
 
 # Cloudflare Wrangler & Node
 .wrangler/
 node_modules/
+package-lock.json
 
 # Flask Sessions
 .flask_sessions/
@@ -74,12 +72,14 @@ android/local.properties
 android/gradle-dist/
 android/jdk/
 *.apk
+!anvaya-vistara.apk
 *.aab
 
 # Lock files
 pylock.toml
+uv.lock
 
-# Misc
+# Deployment & Misc
 .ignore
 .wranglerignore
-uv.lock
+.railwayignore

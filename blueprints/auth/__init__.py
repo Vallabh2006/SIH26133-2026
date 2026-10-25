@@ -18,7 +18,7 @@ from utils.id_generator import generate_patient_id
 from utils.defaults import get_user_center_id
 from utils.constants import DEFAULT_ALLERGIES
 from utils.sanitize import validate_username, validate_email, validate_phone
-from utils.security import check_ip_lockout, record_failed_ip_login, clear_ip_login_attempts, block_if_vpn, get_client_ip
+from utils.security import check_ip_lockout, record_failed_ip_login, clear_ip_login_attempts, block_if_vpn, get_client_ip, hash_password, verify_password
 from app import limiter
 
 auth_bp = Blueprint('auth', __name__)
@@ -170,7 +170,7 @@ def login():
             user = query_db('SELECT * FROM users WHERE LOWER(username) = %s AND is_active = 1', (identifier,), one=True)
             
             if user:
-                if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                if verify_password(password, user['password_hash'], user_id=user['id']):
                     clear_ip_login_attempts(client_ip)
                     execute_db('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = %s', (user['id'],))
                     session.clear()
@@ -277,7 +277,7 @@ def signup():
                 flash(e, 'error')
             return render_template('auth/signup.html', form_data=request.form)
 
-        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed = hash_password(password)
 
         user_id = execute_db(
             'INSERT INTO users (username, password_hash, full_name, role, phone, email, is_active, invite_status) VALUES (%s, %s, %s, %s, %s, %s, 1, %s)',
@@ -435,7 +435,7 @@ def accept_invite(token):
             flash('Passwords do not match.', 'error')
             return render_template('auth/accept_invite.html', user=user, token=token)
 
-        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed = hash_password(password)
         execute_db('''
             UPDATE users 
             SET password_hash = %s, phone = COALESCE(NULLIF(%s, ''), phone), invite_status = 'active', is_active = 1, invite_token = NULL 
@@ -607,7 +607,7 @@ def reset_password():
                 flash('New password and confirmation password do not match.', 'error')
                 return render_template('auth/reset_password.html', email=mask_email(reset_email), user=user, is_verified=True)
 
-            hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            hashed = hash_password(new_password)
             new_version = (user.get('session_version') or 1) + 1
             execute_db('UPDATE users SET password_hash = %s, session_version = %s, failed_login_count = 0, locked_until = NULL WHERE id = %s', 
                        (hashed, new_version, user['id']))

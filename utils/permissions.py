@@ -302,7 +302,23 @@ DEFAULT_ROLE_PERMISSIONS = {
 }
 
 
+import threading
+
+_permissions_matrix_cache = None
+_permissions_matrix_lock = threading.Lock()
+_permissions_initialized = False
+
+
+def invalidate_permissions_cache():
+    global _permissions_matrix_cache
+    with _permissions_matrix_lock:
+        _permissions_matrix_cache = None
+
+
 def init_permissions_db():
+    global _permissions_initialized
+    if _permissions_initialized:
+        return
     try:
         execute_db('''
             CREATE TABLE IF NOT EXISTS role_permissions (
@@ -317,24 +333,42 @@ def init_permissions_db():
             for r_key, actions in DEFAULT_ROLE_PERMISSIONS.items():
                 for a_key, allowed in actions.items():
                     execute_db('INSERT INTO role_permissions (role, action, is_allowed) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING', (r_key, a_key, allowed))
+        _permissions_initialized = True
     except Exception:
         pass
 
 
-def get_permissions_matrix():
-    init_permissions_db()
-    rows = query_db('SELECT role, action, is_allowed FROM role_permissions') or []
-    matrix = {}
-    for r in rows:
-        matrix.setdefault(r['role'], {})[r['action']] = bool(r['is_allowed'])
-    
-    for r_key, actions in DEFAULT_ROLE_PERMISSIONS.items():
-        if r_key not in matrix:
-            matrix[r_key] = {}
-        for a_key, val in actions.items():
-            if a_key not in matrix[r_key]:
-                matrix[r_key][a_key] = bool(val)
-    return matrix
+def get_permissions_matrix(force_refresh=False):
+    global _permissions_matrix_cache
+    if _permissions_matrix_cache is not None and not force_refresh:
+        return _permissions_matrix_cache
+
+    with _permissions_matrix_lock:
+        if _permissions_matrix_cache is not None and not force_refresh:
+            return _permissions_matrix_cache
+
+        try:
+            rows = query_db('SELECT role, action, is_allowed FROM role_permissions') or []
+            if not rows and not _permissions_initialized:
+                init_permissions_db()
+                rows = query_db('SELECT role, action, is_allowed FROM role_permissions') or []
+        except Exception:
+            init_permissions_db()
+            rows = query_db('SELECT role, action, is_allowed FROM role_permissions') or []
+
+        matrix = {}
+        for r in rows:
+            matrix.setdefault(r['role'], {})[r['action']] = bool(r['is_allowed'])
+
+        for r_key, actions in DEFAULT_ROLE_PERMISSIONS.items():
+            if r_key not in matrix:
+                matrix[r_key] = {}
+            for a_key, val in actions.items():
+                if a_key not in matrix[r_key]:
+                    matrix[r_key][a_key] = bool(val)
+
+        _permissions_matrix_cache = matrix
+        return _permissions_matrix_cache
 
 
 def has_permission(action, user=None):
