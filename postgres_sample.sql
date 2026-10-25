@@ -1,4 +1,3 @@
-
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 GRANT ALL ON SCHEMA public TO PUBLIC;
@@ -286,7 +285,7 @@ INSERT INTO users (id, staff_id, username, password_hash, full_name, role, cente
     (8, 'RAD-2026-007', 'admin_bvm', '$2b$12$4o4lqHmY0MDN8wksSvpXPeEI4wZ8dPqqi2XMwA8A.fH78QTZJ7BNa', 'BVM SubCentre Administrator', 'region_admin', 'FAC-BVM-07', '+91 2692 230105', 'bvm.admin@anvayavistara.in', NULL, 1, 'en', 'active', NULL, 'SubCentre Field Coordinator', '2026-09-05 22:21:01', '2026-09-06 16:08:39', 0, NULL, 2),
     (9, 'RAD-2026-008', 'admin_anand', '$2b$12$4o4lqHmY0MDN8wksSvpXPeEI4wZ8dPqqi2XMwA8A.fH78QTZJ7BNa', 'District Civil Hospital Admin', 'region_admin', 'FAC-CIVIL-08', '+91 2692 250101', 'anand.admin@anvayavistara.in', NULL, 1, 'en', 'active', NULL, 'District Administrative Officer', '2026-09-05 22:21:01', '2026-09-06 12:34:55', 5, '2026-09-06 12:49:55', 2),
     (13, 'PHM-2026-001', 'drvallabh', '$2b$12$IzgZH65W1gVs8VAwZLbLNO8qY4eH5Nb8OTMLee5gw/UpOL3FW3pRG', 'Dr. Vallabh Mehrotra', 'doctor', 'FAC-BAKROL-01', '+91 98765 43210', 'vallabhmehrotra45@gmail.com', NULL, 1, 'en', 'active', NULL, 'Medical Officer / General Physician', '2026-09-05 22:21:01', '2026-09-07 08:16:52', 0, NULL, 3),
-    
+
 SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 1));
 
 INSERT INTO role_permissions (role, action, is_allowed) VALUES

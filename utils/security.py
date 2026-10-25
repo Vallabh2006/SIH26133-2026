@@ -2,6 +2,8 @@ import os
 import re
 import time
 import json
+import hashlib
+import hmac
 import ipaddress
 import threading
 import urllib.request
@@ -221,3 +223,55 @@ def block_if_vpn():
             return render_template('auth/signup.html', form_data={})
         return render_template('auth/login.html', active_tab='username', form_data={})
     return None
+
+
+def hash_password(password: str) -> str:
+    if not password:
+        return ""
+    salt = os.urandom(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 2000)
+    return f"$pbkdf2-sha256$2000${salt.hex()}${key.hex()}"
+
+
+def verify_password(password: str, stored_hash: str, user_id=None) -> bool:
+    if not password or not stored_hash:
+        return False
+
+    if stored_hash.startswith("$pbkdf2-sha256$"):
+        try:
+            parts = stored_hash.split("$")
+            if len(parts) == 5:
+                iterations = int(parts[2])
+                salt = bytes.fromhex(parts[3])
+                expected = bytes.fromhex(parts[4])
+                computed = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+                return hmac.compare_digest(expected, computed)
+        except Exception as e:
+            logger.warning("Error verifying PBKDF2 password: %s", e)
+            return False
+
+    if stored_hash.startswith(("$2a$", "$2b$", "$2y$")):
+        try:
+            from utils.db import query_db, execute_db
+            pg_hash = stored_hash.replace("$2b$", "$2a$", 1)
+            row = query_db(
+                "SELECT (crypt(%s, %s) = %s) as is_match",
+                (password, pg_hash, pg_hash),
+                one=True
+            )
+            is_match = bool(row and (row.get("is_match") is True or row.get("is_match") == 1))
+            if is_match and user_id:
+                try:
+                    new_hash = hash_password(password)
+                    execute_db("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user_id))
+                except Exception:
+                    pass
+            return is_match
+        except Exception:
+            try:
+                import bcrypt
+                return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
+            except Exception:
+                return False
+
+    return stored_hash == password

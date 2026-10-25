@@ -1,3 +1,4 @@
+from utils.security import hash_password
 import re
 import csv
 import io
@@ -252,7 +253,7 @@ def staff_register():
         staff_id = generate_staff_id(role)
 
     temp_password = secrets.token_urlsafe(8)
-    hashed_password = bcrypt.hashpw(temp_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    hashed_password = hash_password(temp_password)
     invite_token = secrets.token_urlsafe(32)
 
     new_user_id = execute_db('''
@@ -305,7 +306,7 @@ def staff_resend_invite(user_id):
 
     invite_token = secrets.token_urlsafe(32)
     temp_password = secrets.token_urlsafe(8)
-    hashed_password = bcrypt.hashpw(temp_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    hashed_password = hash_password(temp_password)
 
     execute_db('''
         UPDATE users 
@@ -563,7 +564,7 @@ def create_facility():
         if not admin_email:
             admin_email = f'{admin_username}@anvayavistara.in'
 
-        pw_hash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        pw_hash = hash_password(admin_password)
         staff_id = generate_staff_id('region_admin')
 
         execute_db('''
@@ -687,7 +688,7 @@ def reset_facility_staff_password(user_id):
         flash('Password must be at least 8 characters long.', 'error')
         return redirect(url_for('admin.facilities'))
 
-    hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    hashed = hash_password(new_password)
     new_version = (target_user.get('session_version') or 1) + 1
     execute_db('UPDATE users SET password_hash = %s, session_version = %s, failed_login_count = 0, locked_until = NULL, updated_at = NOW() WHERE id = %s', 
                (hashed, new_version, user_id))
@@ -1313,6 +1314,11 @@ def save_permission_matrix():
                 INSERT INTO role_permissions (role, action, is_allowed) VALUES (%s, %s, %s) ON CONFLICT (role, action) DO UPDATE SET is_allowed = EXCLUDED.is_allowed
             ''', (r_key, a_key, is_allowed))
             
+    try:
+        from utils.permissions import invalidate_permissions_cache
+        invalidate_permissions_cache()
+    except Exception:
+        pass
     log_audit('permission_matrix_updated', 'system', 0, 'Action permission matrix updated by Master Admin')
     flash('Role Action Permission Matrix successfully updated and deployed across the platform.', 'success')
     return redirect(url_for('admin.permissions'))
@@ -1383,7 +1389,7 @@ def reset_user_password(user_id):
         flash('Password must be at least 8 characters long.', 'error')
         return redirect(url_for('admin.permissions'))
 
-    hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    hashed = hash_password(new_password)
     new_version = (target_user.get('session_version') or 1) + 1
     execute_db('UPDATE users SET password_hash = %s, session_version = %s, failed_login_count = 0, locked_until = NULL, updated_at = NOW() WHERE id = %s', (hashed, new_version, user_id))
 

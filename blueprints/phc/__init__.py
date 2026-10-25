@@ -11,6 +11,7 @@ from utils.defaults import get_user_center_id, get_center_or_404
 from utils.constants import DEFAULT_ALLERGIES, DEFAULT_DISTRICT
 from app import limiter, DEFAULT_DEPARTMENT, DEFAULT_WALK_IN_REASON
 from utils.sanitize import sanitize_csv_cell, sanitize_text
+from utils.cache import get_cached, set_cached, get_cached_reference, invalidate_cache
 
 phc_bp = Blueprint('phc', __name__, url_prefix='/phc')
 

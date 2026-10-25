@@ -20,11 +20,11 @@ from utils.constants import DEFAULT_ALLERGIES, DEFAULT_DISTRICT, DEFAULT_DEPARTM
 from utils.logger import setup_logging, get_logger
 
 class CustomCSRFProtect(CSRFProtect):
-    def protect(self):
+    def protect(self, *args, **kwargs):
         from flask import current_app
         if current_app.testing or current_app.config.get('TESTING') or not current_app.config.get('WTF_CSRF_ENABLED', True):
             return
-        super().protect()
+        super().protect(*args, **kwargs)
 
 csrf = CustomCSRFProtect()
 limiter = Limiter(
@@ -115,21 +115,32 @@ def create_app(config_name=None):
 
     @app.before_request
     def check_testing_and_session():
+        g.request_start_time = time.time()
+        if app.config.get("TESTING"):
+            app.config["WTF_CSRF_ENABLED"] = False
+
+        path = request.path or "/"
+        if (
+            path.startswith("/static/")
+            or path.startswith("/public/")
+            or path in ("/favicon.ico", "/service-worker.js", "/manifest.json", "/api/health", "/api/time")
+        ):
+            return None
+
         from utils.rate_limiter import check_custom_rate_limit
         rl_resp = check_custom_rate_limit()
         if rl_resp:
             return rl_resp
-        g.request_start_time = time.time()
-        if app.config.get("TESTING"):
-            app.config["WTF_CSRF_ENABLED"] = False
-        validate_user_session_logic()
+
+        if session and session.get("user_id"):
+            validate_user_session_logic()
 
     def validate_user_session_logic():
-        if session and 'user_id' in session and 'session_version' in session:
+        if session and session.get('user_id') and 'session_version' in session:
             try:
                 from utils.auth_helpers import get_current_user
                 user = get_current_user()
-                if not user or not user.get('is_active') or user.get('session_version', 1) != session.get('session_version'):
+                if user and (not user.get('is_active') or user.get('session_version', 1) != session.get('session_version')):
                     session.clear()
                     flash('Your session has expired or was invalidated. Please log in again.', 'warning')
                     return redirect(url_for('auth.login'))
@@ -438,7 +449,7 @@ def create_app(config_name=None):
             account_name_changed = (new_username != current_db_user['username']) or (new_full_name != current_db_user['full_name'])
             password_verified = False
             if curr_pass:
-                if bcrypt.checkpw(curr_pass.encode('utf-8'), current_db_user['password_hash'].encode('utf-8')):
+                if verify_password(curr_pass, current_db_user['password_hash'], user_id=current_db_user['id']):
                     password_verified = True
                 else:
                     errors.append('Current password entered is incorrect.')
@@ -522,7 +533,7 @@ def create_app(config_name=None):
                            (new_full_name, new_username, email_to_save, new_phone or None, new_lang, new_designation or None, current_db_user['id']))
 
                 if update_password:
-                    hashed = bcrypt.hashpw(new_pass.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                    hashed = hash_password(new_pass)
                     new_version = current_db_user.get('session_version', 1) + 1
                     execute_db('UPDATE users SET password_hash = %s, session_version = %s WHERE id = %s', (hashed, new_version, current_db_user['id']))
                     session['session_version'] = new_version
@@ -650,7 +661,7 @@ def create_app(config_name=None):
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        from utils.security import get_client_ip
+        from utils.security import hash_password, verify_password, get_client_ip
         client_ip = get_client_ip()
         logger.warning("Rate limit triggered: ip=%s, path=%s, desc=%s", client_ip, request.path, str(e.description))
         desc = str(e.description) if hasattr(e, "description") else "Maximum 15 requests per 30 seconds."

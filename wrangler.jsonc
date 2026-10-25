@@ -5,6 +5,7 @@
   "compatibility_flags": [
     "python_workers"
   ],
+  "workers_dev": true,
   "routes": [
     {
       "pattern": "app.anvaya.site",
@@ -41,6 +42,12 @@
     "SESSION_TYPE": "cookie",
     "RATELIMIT_ENABLED": "true",
     "BLOCK_VPN": "false",
-    "OTP_VALIDITY_SECONDS": "600"
+    "OTP_VALIDITY_SECONDS": "600",
+    "PG_HOST": "db.bojlmvxxonwmbcgjqhoo.supabase.co",
+    "PG_PORT": "5432",
+    "PG_DB": "postgres",
+    "PG_USER": "postgres",
+    "PG_PASSWORD": "Anvay@vistara2026-Aug",
+    "PG_SSLMODE": "require"
   }
 }
